@@ -118,46 +118,57 @@ export default function ListingDetailScreen() {
             <Text style={styles.description}>{listing.description}</Text>
           </>
         ) : null}
-        <Text style={styles.sectionTitle}>Send an offer</Text>
-        <Text style={styles.offerNote}>
-          This submits an offer for the farmer to review. No payment is taken in the app.
-        </Text>
-        <View style={styles.fields}>
-          <FormInput
-            keyboardType="decimal-pad"
-            label="Your price per kg (UGX)"
-            onChangeText={setPrice}
-            placeholder="e.g. 2500"
-            value={price}
-          />
-          <FormInput
-            keyboardType="decimal-pad"
-            label="Quantity (kg)"
-            onChangeText={setQuantity}
-            placeholder={`Up to ${listing.quantity_kg} kg`}
-            value={quantity}
-          />
-          <FormInput
-            label="Message (optional)"
-            multiline
-            onChangeText={setMessage}
-            placeholder="Add a note for the farmer"
-            textAlignVertical="top"
-            value={message}
-          />
-        </View>
-        {formError ? (
-          <Text accessibilityRole="alert" style={styles.error}>{formError}</Text>
-        ) : null}
-        <PrimaryButton
-          loading={offerMutation.isPending}
-          onPress={() => {
-            setFormError('');
-            offerMutation.mutate();
-          }}
-        >
-          Send offer
-        </PrimaryButton>
+        {listing.is_demo ? (
+          <View style={styles.sampleNote}>
+            <Text style={styles.sampleTitle}>Sample listing</Text>
+            <Text style={styles.offerNote}>
+              This example is for demonstration only and is not available to buy.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Send an offer</Text>
+            <Text style={styles.offerNote}>
+              This submits an offer for the farmer to review. No payment is taken in the app.
+            </Text>
+            <View style={styles.fields}>
+              <FormInput
+                keyboardType="decimal-pad"
+                label="Your price per kg (UGX)"
+                onChangeText={setPrice}
+                placeholder="e.g. 2500"
+                value={price}
+              />
+              <FormInput
+                keyboardType="decimal-pad"
+                label="Quantity (kg)"
+                onChangeText={setQuantity}
+                placeholder={`Up to ${listing.quantity_kg} kg`}
+                value={quantity}
+              />
+              <FormInput
+                label="Message (optional)"
+                multiline
+                onChangeText={setMessage}
+                placeholder="Add a note for the farmer"
+                textAlignVertical="top"
+                value={message}
+              />
+            </View>
+            {formError ? (
+              <Text accessibilityRole="alert" style={styles.error}>{formError}</Text>
+            ) : null}
+            <PrimaryButton
+              loading={offerMutation.isPending}
+              onPress={() => {
+                setFormError('');
+                offerMutation.mutate();
+              }}
+            >
+              Send offer
+            </PrimaryButton>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -207,4 +218,6 @@ const styles = StyleSheet.create({
   offerNote: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 6 },
   fields: { gap: 14, marginVertical: 16 },
   error: { color: colors.error, fontSize: 12, marginBottom: 12 },
+  sampleNote: { backgroundColor: colors.paleGreen, borderRadius: 12, marginTop: 20, padding: 14 },
+  sampleTitle: { color: colors.primary, fontSize: 14, fontWeight: '800' },
 });

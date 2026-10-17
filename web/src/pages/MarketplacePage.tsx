@@ -112,6 +112,7 @@ export function MarketplacePage() {
                   <Link className="listing-image" to={`/marketplace/${listing.id}`} aria-label={`Open ${listing.title}`}>
                     {image ? <img alt="" loading="lazy" src={image} /> : <span className="listing-placeholder"><Wheat size={35} aria-hidden="true" /><small>Produce listing</small></span>}
                     <span className="listing-grade">Grade {listing.quality_grade}</span>
+                    {listing.is_demo ? <span className="listing-sample-badge">Sample</span> : null}
                   </Link>
                   <div className="listing-card-body">
                     <p className="eyebrow">{listing.commodity_name}</p>

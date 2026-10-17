@@ -323,6 +323,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .listing-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #5e9560; }
 .listing-placeholder small { font-size: 10px; }
 .listing-grade { position: absolute; top: 10px; right: 10px; padding: 5px 8px; border: 1px solid rgb(255 255 255 / 75%); border-radius: 20px; color: #354f36; background: rgb(255 255 255 / 90%); font-size: 9px; font-weight: 800; }
+.listing-sample-badge { position: absolute; top: 10px; left: 10px; padding: 5px 8px; border-radius: 20px; color: #765919; background: #fff4d6; font-size: 9px; font-weight: 800; }
+.sample-data-note { padding: 10px 13px; border: 1px solid #f0dca5; border-radius: 10px; color: #765919; background: #fff9e9; font-size: 11px; }
 .listing-card-body { padding: 15px; }
 .listing-card-body .eyebrow { margin-bottom: 5px; }
 .listing-card-body h2 { margin: 0; color: #344239; font-size: 14px; }

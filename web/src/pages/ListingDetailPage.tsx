@@ -67,6 +67,7 @@ export function ListingDetailPage() {
     <>
       <Link className="back-link page-back" to="/marketplace"><ArrowLeft size={16} aria-hidden="true" /> Marketplace</Link>
       <PageHeader eyebrow="PRODUCE LISTING" title={listing.title} description={`${listing.commodity_name} · ${listing.district_name}`} />
+      {listing.is_demo ? <p className="sample-data-note" role="note">Sample listing for demonstration only. This is not a real offer.</p> : null}
       <div className="detail-layout">
         <div className="detail-main">
           <div className="listing-detail-image">
@@ -88,7 +89,9 @@ export function ListingDetailPage() {
         </div>
         <aside className="offer-panel">
           <div className="offer-panel-heading"><span className="feature-icon"><Package size={18} aria-hidden="true" /></span><div><p className="eyebrow">INTERESTED?</p><h2>Send an offer</h2></div></div>
-          {listing.status.toLowerCase() !== 'active' ? (
+          {listing.is_demo ? (
+            <EmptyState title="Sample listing" description="This example is for demonstration only. Offers are disabled." />
+          ) : listing.status.toLowerCase() !== 'active' ? (
             <EmptyState title="Listing unavailable" description={`This listing is currently ${listing.status.toLowerCase()}.`} />
           ) : offerSent ? (
             <div className="success-panel" role="status"><CheckCircle2 size={25} aria-hidden="true" /><h3>Offer sent</h3><p>The farmer can review your offer in AgriSmart. No payment has been taken.</p><button className="button button-secondary button-full" onClick={() => setOfferSent(false)} type="button">Send another offer</button></div>

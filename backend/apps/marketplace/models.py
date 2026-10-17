@@ -51,6 +51,7 @@ class Listing(models.Model):
     
     # Images
     images = models.JSONField(default=list, blank=True)  # List of image URLs
+    is_demo = models.BooleanField(default=False)
     
     # Status
     status = models.CharField(

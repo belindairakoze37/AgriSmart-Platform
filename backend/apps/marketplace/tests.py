@@ -2,6 +2,7 @@ from io import BytesIO
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -168,3 +169,54 @@ class MarketplaceOfferTests(TestCase):
                 title='New offer on your listing',
             ).exists()
         )
+
+    def test_sample_listing_cannot_receive_an_offer(self):
+        self.listing.is_demo = True
+        self.listing.save(update_fields=['is_demo'])
+        self.client.force_authenticate(self.buyer)
+        existing_offers = Offer.objects.filter(listing=self.listing).count()
+
+        response = self.client.post(
+            reverse('offer-list'),
+            {
+                'listing': str(self.listing.pk),
+                'offered_price_per_kg': '2300',
+                'quantity_kg': '50',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Sample listings', str(response.data))
+        self.assertEqual(
+            Offer.objects.filter(listing=self.listing).count(),
+            existing_offers,
+        )
+
+
+class SampleMarketplaceSeedTests(TestCase):
+    def test_seed_marketplace_creates_idempotent_marked_listings(self):
+        call_command('seed_marketplace', verbosity=0)
+        call_command('seed_marketplace', verbosity=0)
+
+        listings = Listing.objects.filter(is_demo=True)
+        self.assertEqual(listings.count(), 6)
+        self.assertEqual(
+            listings.filter(description__contains='Sample marketplace data').count(),
+            6,
+        )
+        self.assertFalse(
+            User.objects.filter(username__startswith='agrismart-sample-seller-')
+            .filter(is_active=True)
+            .exists()
+        )
+
+    def test_seeded_sample_listing_is_exposed_by_marketplace_api(self):
+        call_command('seed_marketplace', verbosity=0)
+        listing = Listing.objects.filter(is_demo=True).first()
+        response = APIClient().get(
+            reverse('listing-detail', kwargs={'pk': listing.pk}),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['is_demo'])

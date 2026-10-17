@@ -125,6 +125,11 @@ class OfferListCreateView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         listing = serializer.validated_data['listing']
+
+        if listing.is_demo:
+            raise serializers.ValidationError(
+                'Sample listings are for demonstration only and do not accept offers.'
+            )
         
         # Can't offer on own listing
         if listing.farmer.user == self.request.user:

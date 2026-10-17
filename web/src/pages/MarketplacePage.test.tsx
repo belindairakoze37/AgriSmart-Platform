@@ -54,6 +54,12 @@ describe('marketplace offers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    apiMocks.getListings.mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    });
     apiMocks.getOffers.mockResolvedValue({
       count: 1,
       next: null,
@@ -75,5 +81,45 @@ describe('marketplace offers', () => {
       expect(apiMocks.updateOfferStatus).toHaveBeenCalledWith('offer-1', 'accepted'),
     );
     await waitFor(() => expect(apiMocks.getOffers).toHaveBeenCalledTimes(2));
+  });
+
+  it('displays seeded sample listings with a visible sample label', async () => {
+    apiMocks.getListings.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{
+        id: 'sample-maize',
+        farmer: 'demo-farmer',
+        farmer_name: 'Demo Farmer Gulu',
+        farmer_phone: '+256000000001',
+        commodity: 'maize',
+        commodity_name: 'Maize',
+        title: 'Sample listing: dried maize grain',
+        description: 'Sample marketplace data for demonstration only.',
+        quantity_kg: '850.00',
+        quality_grade: 'A',
+        expected_price_per_kg: '1250.00',
+        available_from: '2026-10-17',
+        available_until: null,
+        district: 'gulu',
+        district_name: 'Gulu',
+        latitude: null,
+        longitude: null,
+        pickup_location: 'Gulu town collection point',
+        images: [],
+        status: 'active',
+        is_demo: true,
+        views_count: 0,
+        offers_count: 0,
+        created_at: '2026-10-17T10:00:00Z',
+        updated_at: '2026-10-17T10:00:00Z',
+      }],
+    });
+
+    renderMarketplace();
+
+    expect(await screen.findByText('Sample listing: dried maize grain')).toBeInTheDocument();
+    expect(screen.getByText('Sample', { selector: '.listing-sample-badge' })).toBeInTheDocument();
   });
 });

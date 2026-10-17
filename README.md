@@ -96,6 +96,18 @@ optional. All rows are validated before changes are applied.
 Administrator and extension-officer roles must be provisioned by an
 administrator; public registration cannot assign either role.
 
+For development or demonstrations, add sample marketplace listings after
+migrations with:
+
+```powershell
+cd backend
+.\venv\Scripts\python.exe manage.py seed_marketplace
+```
+
+The command is safe to rerun. It creates six listings labeled as samples in the
+browser and mobile marketplace; demo seller accounts are inactive, and sample
+listings do not accept offers. Do not run this command in production.
+
 The live service still has external prerequisites and incomplete integrations:
 weather requires a valid OpenWeatherMap key and district coordinates; SMS/OTP
 delivery and feature-phone offer replies are not connected; MTN/Airtel payments,

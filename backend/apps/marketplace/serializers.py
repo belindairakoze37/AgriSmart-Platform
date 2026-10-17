@@ -23,9 +23,11 @@ class ListingSerializer(serializers.ModelSerializer):
             'available_from', 'available_until',
             'district', 'district_name', 'latitude', 'longitude',
             'pickup_location', 'images', 'status', 'views_count',
-            'offers_count', 'created_at', 'updated_at'
+            'offers_count', 'is_demo', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'farmer', 'views_count', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'farmer', 'views_count', 'is_demo', 'created_at', 'updated_at',
+        ]
     
     def get_offers_count(self, obj):
         return obj.offers.filter(status='pending').count()

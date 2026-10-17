@@ -30,6 +30,7 @@ export function ListingCard({
           <Text numberOfLines={1} style={styles.title}>{listing.title}</Text>
           <Text style={styles.grade}>Grade {listing.quality_grade}</Text>
         </View>
+        {listing.is_demo ? <Text style={styles.sampleBadge}>SAMPLE LISTING · NOT FOR SALE</Text> : null}
         <Text style={styles.commodity}>{listing.commodity_name} · {listing.quantity_kg} kg</Text>
         <View style={styles.bottomRow}>
           <View style={styles.location}>
@@ -60,6 +61,7 @@ const styles = StyleSheet.create({
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: 8, justifyContent: 'space-between' },
   title: { color: colors.text, flex: 1, fontSize: 16, fontWeight: '800' },
   grade: { backgroundColor: '#F3F4F6', borderRadius: 9, color: colors.muted, fontSize: 10, fontWeight: '700', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 },
+  sampleBadge: { color: colors.warning, fontSize: 9, fontWeight: '800', marginTop: 6 },
   commodity: { color: colors.muted, fontSize: 13, marginTop: 5 },
   bottomRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   location: { alignItems: 'center', flexDirection: 'row', flex: 1, gap: 4 },

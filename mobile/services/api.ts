@@ -164,6 +164,7 @@ export interface Listing {
   pickup_location: string;
   images: string[];
   status: string;
+  is_demo: boolean;
   views_count: number;
   offers_count: number;
   created_at: string;
