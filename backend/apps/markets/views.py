@@ -13,6 +13,7 @@ from .serializers import (
 )
 
 
+@extend_schema(tags=['Markets'], summary='List all districts')
 class DistrictListView(generics.ListAPIView):
     """List all districts"""
     queryset = District.objects.all()
@@ -21,6 +22,7 @@ class DistrictListView(generics.ListAPIView):
     pagination_class = None  # Return all districts at once
 
 
+@extend_schema(tags=['Markets'], summary='List active markets with optional filters')
 class MarketListView(generics.ListAPIView):
     """List markets, optionally filtered by district"""
     serializer_class = MarketSerializer
@@ -32,6 +34,7 @@ class MarketListView(generics.ListAPIView):
         return Market.objects.filter(is_active=True).select_related('district')
 
 
+@extend_schema(tags=['Markets'], summary='List all active commodities')
 class CommodityListView(generics.ListAPIView):
     """List all commodities"""
     queryset = Commodity.objects.filter(is_active=True)
@@ -42,6 +45,7 @@ class CommodityListView(generics.ListAPIView):
     pagination_class = None
 
 
+@extend_schema(tags=['Markets'], summary='List market prices with optional filters')
 class MarketPriceListView(generics.ListAPIView):
     """List market prices with filters"""
     serializer_class = MarketPriceSerializer
@@ -198,6 +202,7 @@ def price_history(request):
     })
 
 
+@extend_schema(tags=['Markets'], summary='List or create a price alert')
 class PriceAlertListCreateView(generics.ListCreateAPIView):
     """List or create price alerts"""
     serializer_class = PriceAlertSerializer
@@ -207,6 +212,7 @@ class PriceAlertListCreateView(generics.ListCreateAPIView):
         return PriceAlert.objects.filter(user=self.request.user)
 
 
+@extend_schema(tags=['Markets'], summary='Retrieve, update, or delete a price alert')
 class PriceAlertDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Manage price alert"""
     serializer_class = PriceAlertSerializer

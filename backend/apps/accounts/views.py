@@ -161,6 +161,7 @@ def verify_otp(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Accounts'], summary='Get current user profile')
 class ProfileView(generics.RetrieveUpdateAPIView):
     """Get or update current user's profile"""
     serializer_class = UserSerializer
@@ -170,6 +171,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+@extend_schema(tags=['Farmers'], summary='Get or update farmer profile')
 class FarmerProfileView(generics.RetrieveUpdateAPIView):
     """Get or update farmer profile"""
     serializer_class = FarmerProfileSerializer
@@ -180,6 +182,7 @@ class FarmerProfileView(generics.RetrieveUpdateAPIView):
         return profile
 
 
+@extend_schema(tags=['Farmers'], summary='List or create farms for the current farmer')
 class FarmListCreateView(generics.ListCreateAPIView):
     """List or create farms for current farmer"""
     serializer_class = FarmSerializer
@@ -193,6 +196,7 @@ class FarmListCreateView(generics.ListCreateAPIView):
         serializer.save(farmer=profile)
 
 
+@extend_schema(tags=['Farmers'], summary='Retrieve, update, or delete a farm')
 class FarmDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a farm"""
     serializer_class = FarmSerializer
@@ -202,6 +206,7 @@ class FarmDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Farm.objects.filter(farmer__user=self.request.user)
 
 
+@extend_schema(tags=['Farmers'], summary='List or create crops for the current farmer')
 class CropListCreateView(generics.ListCreateAPIView):
     """List or create crops"""
     serializer_class = CropSerializer
@@ -219,6 +224,7 @@ class CropListCreateView(generics.ListCreateAPIView):
         serializer.save()
 
 
+@extend_schema(tags=['Farmers'], summary='Retrieve, update, or delete a crop')
 class CropDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a crop"""
     serializer_class = CropSerializer
