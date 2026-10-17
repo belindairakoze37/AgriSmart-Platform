@@ -3,6 +3,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from unittest.mock import patch
 
 from .models import AdvisoryMessage, AdvisorySession
 from .services import AdvisoryService
@@ -30,6 +31,73 @@ class AdvisoryServiceTests(TestCase):
 
         self.assertIn('17:17:17', advice['content'])
         self.assertIn('NPK', advice['content'])
+
+    @override_settings(OPENAI_API_KEY='')
+    def test_unconfigured_ai_returns_actionable_guidance_and_marks_fallback(self):
+        advice = AdvisoryService().get_advice(
+            'How can I identify disease on cassava?',
+            crop='Cassava',
+        )
+
+        self.assertIn('can\'t confirm a disease', advice['content'])
+        self.assertIn('symptoms', advice['content'])
+        self.assertEqual(
+            advice['metadata'],
+            {
+                'provider': 'rule_based',
+                'mode': 'fallback',
+                'fallback_reason': 'not_configured',
+            },
+        )
+
+    @override_settings(OPENAI_API_KEY='test-api-key', OPENAI_MODEL='test-model')
+    @patch('apps.advisory.services.OpenAI')
+    def test_configured_openai_generates_answer_and_marks_provider(self, openai):
+        client = openai.return_value
+        client.chat.completions.create.return_value.choices = [
+            type('Choice', (), {
+                'message': type('Message', (), {
+                    'content': 'Plant maize at the onset of reliable rains.',
+                })(),
+            })(),
+        ]
+
+        advice = AdvisoryService().get_advice(
+            'When should I plant maize?',
+            crop='Maize',
+            location='Gulu',
+        )
+
+        self.assertEqual(
+            advice['content'],
+            'Plant maize at the onset of reliable rains.',
+        )
+        self.assertEqual(advice['metadata']['provider'], 'openai')
+        self.assertEqual(advice['metadata']['mode'], 'ai')
+        client.chat.completions.create.assert_called_once()
+        self.assertEqual(
+            client.chat.completions.create.call_args.kwargs['model'],
+            'test-model',
+        )
+        openai.assert_called_once_with(
+            api_key='test-api-key',
+            timeout=10.0,
+            max_retries=0,
+        )
+
+    @override_settings(OPENAI_API_KEY='test-api-key')
+    @patch('apps.advisory.services.OpenAI')
+    def test_openai_provider_error_falls_back_with_visible_reason(self, openai):
+        openai.return_value.chat.completions.create.side_effect = TimeoutError()
+
+        advice = AdvisoryService().get_advice(
+            'When should I plant maize?',
+            crop='Maize',
+        )
+
+        self.assertIn('March-April', advice['content'])
+        self.assertEqual(advice['metadata']['mode'], 'fallback')
+        self.assertEqual(advice['metadata']['fallback_reason'], 'provider_error')
 
 
 class AdvisoryChatAPITests(APITestCase):
@@ -63,6 +131,7 @@ class AdvisoryChatAPITests(APITestCase):
         self.assertEqual(session.messages.count(), 2)
         self.assertEqual(response.data['user_message']['content'], 'When should I plant maize?')
         self.assertIn('March-April', response.data['ai_message']['content'])
+        self.assertEqual(response.data['ai_message']['metadata']['mode'], 'fallback')
 
     def test_chat_rejects_blank_messages(self):
         response = self.client.post(
