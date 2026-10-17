@@ -96,4 +96,53 @@ describe('agricultural advisor', () => {
       ),
     );
   });
+
+  it('shows a fresh question composer when starting from an existing conversation', async () => {
+    apiMocks.getSessions.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{
+        id: 'old-session',
+        title: 'Old question',
+        crop_type: 'Maize',
+        location: 'Gulu',
+        language: 'en',
+        is_active: true,
+        last_message: {
+          content: 'Previous advice',
+          sender: 'ai',
+          created_at: '2026-01-01T12:00:00Z',
+        },
+        message_count: 2,
+        created_at: '2026-01-01T11:00:00Z',
+        updated_at: '2026-01-01T12:00:00Z',
+      }],
+    });
+    apiMocks.getMessages.mockResolvedValue({
+      count: 1,
+      next: null,
+      previous: null,
+      results: [{
+        id: 'old-message',
+        sender: 'ai',
+        content: 'Previous advice',
+        intent: 'general',
+        confidence: 0.7,
+        sources: [],
+        metadata: {},
+        created_at: '2026-01-01T12:00:00Z',
+      }],
+    });
+
+    renderAdvisor();
+    expect(await screen.findByText('Previous advice')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'New conversation' }));
+
+    expect(await screen.findByRole('heading', {
+      name: 'What is happening on your farm?',
+    })).toBeInTheDocument();
+    expect(screen.getByText('Guidance for your farm · New conversation')).toBeInTheDocument();
+    expect(screen.getByLabelText('Message the agricultural advisor')).toHaveValue('');
+  });
 });

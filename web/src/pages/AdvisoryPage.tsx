@@ -126,7 +126,7 @@ export function AdvisoryPage() {
               <div className="chat-messages" aria-live="polite">
                 {messagesQuery.isPending && activeSessionId ? <LoadingState label="Loading your conversation…" /> : null}
                 {messagesQuery.hasPreviousPage ? <button className="load-earlier" disabled={messagesQuery.isFetchingPreviousPage} onClick={() => void messagesQuery.fetchPreviousPage()} type="button">{messagesQuery.isFetchingPreviousPage ? 'Loading earlier messages…' : 'Load earlier messages'}</button> : null}
-                {messages.length === 0 && !messagesQuery.isPending ? (
+                {messages.length === 0 && (!activeSessionId || !messagesQuery.isPending) ? (
                   <div className="chat-welcome"><span className="chat-welcome-icon"><LeafIcon /></span><h2>What is happening on your farm?</h2><p>Ask a question to start. Your replies and conversation history are saved to your AgriSmart account.</p><button className="suggestion-chip" onClick={() => setDraft('When is the best time to plant maize?')} type="button">When is the best time to plant maize?</button></div>
                 ) : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
                 {sendMutation.isPending ? <div className="message-row advisor-row"><span className="typing-dot" aria-label="Advisor is responding" /><span className="message-bubble advisor-bubble">Getting guidance…</span></div> : null}
