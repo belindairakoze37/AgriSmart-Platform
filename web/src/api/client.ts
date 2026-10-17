@@ -6,6 +6,8 @@ import type {
   AdvisoryMessage,
   AdvisorySession,
   AdvisoryDeliveryResult,
+  AdminCommodity,
+  AdminDashboardMetrics,
   AuthUser,
   Commodity,
   CreateListingData,
@@ -327,6 +329,50 @@ export const officerApi = {
         '/farmers/officers/advisories/',
         data,
       )
+    ).data;
+  },
+};
+
+export const adminApi = {
+  async getDashboard(): Promise<AdminDashboardMetrics> {
+    return (await api.get<AdminDashboardMetrics>('/markets/admin/dashboard/')).data;
+  },
+  async getCommodities(): Promise<AdminCommodity[]> {
+    return (
+      await api.get<AdminCommodity[]>('/markets/admin/commodities/')
+    ).data;
+  },
+  async saveCommodity(
+    data: FormData,
+    id?: string,
+  ): Promise<AdminCommodity> {
+    const response = id
+      ? await api.patch<AdminCommodity>(
+        `/markets/admin/commodities/${id}/`,
+        data,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      : await api.post<AdminCommodity>(
+        '/markets/admin/commodities/',
+        data,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+    return response.data;
+  },
+  async deactivateCommodity(id: string): Promise<void> {
+    await api.delete(`/markets/admin/commodities/${id}/`);
+  },
+  async importPrices(file: File): Promise<{
+    created: number;
+    updated: number;
+    total_processed: number;
+  }> {
+    const data = new FormData();
+    data.append('file', file);
+    return (
+      await api.post('/markets/admin/prices/import/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
     ).data;
   },
 };

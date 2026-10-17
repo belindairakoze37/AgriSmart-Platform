@@ -77,19 +77,34 @@ deliberate cookie/SameSite and CSRF deployment design.
   the additional `/api/v1/auth/web/` cookie endpoints and the same users/JWT
   and profile resource.
 - Commodity, district, current price and history: `/api/v1/markets/`.
+- Administrator analytics, commodity management, and market-price CSV import:
+  `/api/v1/markets/admin/`.
 - Advisory session/message history and chat: `/api/v1/advisory/`.
 - Marketplace list/detail/create, own listings and offers:
   `/api/v1/marketplace/`.
+- District-scoped extension-officer farmer lists, outbreak reports, and bulk
+  in-app advisories: `/api/v1/farmers/officers/`.
 
 Both clients access the same API-managed business records. Browser and mobile
 clients have distinct refresh-token storage, but sign in to the same account.
-Offer submission and seller accept/reject actions are supported. Accepting an
-offer creates a backend transaction record and marks the listing sold; there is
-no payment processing or transaction-management interface. The mobile app
-supports disease-photo capture/upload, but the backend will not produce a
-diagnosis until a compatible trained model is installed. SMS/OTP delivery,
-price-alert user flows, push notifications, weather alerts, and mobile
-farm/crop management remain incomplete.
+Mobile farmers can manage farms and crops, set price alerts, receive
+in-app marketplace/price/weather notifications, and set notification
+preferences. The browser includes role-gated administrator and extension
+officer portals. The price-import CSV requires `market`, `commodity`,
+`price_per_unit`, and `recorded_date`; `unit`, `price_type`, and `source` are
+optional. All rows are validated before changes are applied.
+Administrator and extension-officer roles must be provisioned by an
+administrator; public registration cannot assign either role.
+
+The live service still has external prerequisites and incomplete integrations:
+weather requires a valid OpenWeatherMap key and district coordinates; SMS/OTP
+delivery and feature-phone offer replies are not connected; MTN/Airtel payments,
+escrow, and actual payment-confirmed transaction handling are not connected;
+push notification delivery is not configured; the UI language preference is
+stored but does not yet translate all screens; and disease diagnosis remains
+unavailable until a compatible trained model is installed. Completed
+transaction records and totals in the admin portal are platform database
+records, not proof of payment or platform revenue.
 
 ## Production deployment
 

@@ -11,6 +11,7 @@ import {
   PackagePlus,
   ShoppingBasket,
   Sprout,
+  ShieldCheck,
   UsersRound,
   X,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ import { MarketDetailPage } from './pages/MarketDetailPage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { OfficerPortalPage } from './pages/OfficerPortalPage';
+import { AdminPortalPage } from './pages/AdminPortalPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,9 +81,15 @@ function AppShell() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
   const workspaceNavigation =
-    user?.role === 'admin' || user?.role === 'extension_officer'
-      ? [...navigation, { to: '/officer', label: 'Officer portal', Icon: UsersRound }]
-      : navigation;
+    user?.role === 'admin'
+      ? [
+        ...navigation,
+        { to: '/officer', label: 'Officer portal', Icon: UsersRound },
+        { to: '/admin', label: 'Admin console', Icon: ShieldCheck },
+      ]
+      : user?.role === 'extension_officer'
+        ? [...navigation, { to: '/officer', label: 'Officer portal', Icon: UsersRound }]
+        : navigation;
   const pageLabel =
     workspaceNavigation.find((item) => location.pathname.startsWith(item.to))?.label ??
     'AgriSmart';
@@ -193,6 +201,14 @@ function RequireOfficerPortal() {
   return <OfficerPortalPage />;
 }
 
+function RequireAdministratorPortal() {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <AdminPortalPage />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -213,6 +229,7 @@ export default function App() {
                 <Route path="/marketplace/:id" element={<ListingDetailPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/officer" element={<RequireOfficerPortal />} />
+                <Route path="/admin" element={<RequireAdministratorPortal />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />

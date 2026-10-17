@@ -204,3 +204,17 @@ export interface AdvisoryDeliveryResult {
   notified: number;
   skipped_by_preferences: number;
 }
+
+export interface AdminDashboardMetrics {
+  total_users: number;
+  total_listings: number;
+  active_listings: number;
+  completed_transactions: number;
+  completed_transaction_value_ugx: string;
+  market_price_reports: number;
+  active_commodities: number;
+}
+
+export interface AdminCommodity extends Commodity {
+  is_active: boolean;
+}
