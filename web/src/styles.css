@@ -201,6 +201,42 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .recent-session-copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
 .recent-session-copy strong { color: #37443a; font-size: 11px; }
 .recent-session-copy small { overflow: hidden; color: #879188; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.officer-district-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 0 0 17px; }
+.officer-district-filter label { color: #5c6b60; font-size: 11px; font-weight: 700; }
+.officer-district-filter input { width: min(260px, 100%); min-height: 39px; padding: 0 11px; border: 1px solid #dfe6df; border-radius: 9px; color: var(--ink); background: white; }
+.officer-clear-filter { padding: 8px; border: 0; background: transparent; cursor: pointer; }
+.officer-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.officer-stat-card { display: flex; min-height: 82px; align-items: center; gap: 12px; padding: 15px; border: 1px solid var(--line); border-radius: 13px; background: white; }
+.officer-stat-card > span { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 11px; color: var(--green); background: var(--green-light); }
+.officer-stat-card > div { display: grid; gap: 4px; }
+.officer-stat-card strong { color: var(--green-deep); font-size: 19px; }
+.officer-stat-card small { color: var(--muted); font-size: 10px; }
+.officer-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 16px; }
+.officer-panel { min-width: 0; padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: white; }
+.officer-panel .section-heading { margin-bottom: 10px; }
+.officer-help { color: var(--muted); font-size: 11px; line-height: 1.6; }
+.officer-advisory-form { display: grid; gap: 8px; }
+.officer-advisory-form label { margin-top: 5px; color: #4e5e52; font-size: 10px; font-weight: 700; }
+.officer-advisory-form input, .officer-advisory-form textarea { width: 100%; min-height: 40px; padding: 10px 11px; border: 1px solid #dfe6df; border-radius: 9px; color: var(--ink); background: #fff; font-size: 12px; }
+.officer-advisory-form textarea { min-height: 104px; resize: vertical; line-height: 1.55; }
+.officer-advisory-form .button { justify-self: start; margin-top: 5px; }
+.officer-outbreaks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.officer-outbreaks li { display: grid; gap: 5px; padding: 12px; border: 1px solid #f0e8d4; border-radius: 10px; background: #fffdf7; }
+.officer-outbreaks li > strong { color: #634f24; font-size: 12px; }
+.officer-outbreaks li > span:last-child { color: #83734e; font-size: 10px; }
+.outbreak-location { display: inline-flex; align-items: center; gap: 4px; color: #8b7134; font-size: 10px; }
+.outbreak-map-link { color: var(--green); font-size: 10px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.outbreak-no-map { color: #8a806b; font-size: 9px; }
+.officer-panel .empty-state { padding: 16px 8px; }
+.officer-farmers { padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: white; }
+.officer-table-wrap { width: 100%; overflow-x: auto; }
+.officer-table { width: 100%; min-width: 640px; border-collapse: collapse; text-align: left; font-size: 11px; }
+.officer-table th, .officer-table td { padding: 11px 10px; border-bottom: 1px solid #edf1ec; vertical-align: top; }
+.officer-table th { color: #829087; font-size: 9px; text-transform: uppercase; }
+.officer-table td { color: #59665d; }
+.officer-table td:first-child strong, .officer-table td:first-child small { display: block; }
+.officer-table td:first-child strong { color: #354239; }
+.officer-table td:first-child small { margin-top: 4px; color: #89938c; font-size: 9px; }
 .recent-listings { padding: 0; list-style: none; }
 .recent-listings li + li { border-top: 1px solid #eef1ed; }
 .recent-listings a { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; }
@@ -472,6 +508,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .quick-action-grid { grid-template-columns: 1fr; gap: 8px; }
   .quick-action-card { min-height: 67px; }
   .dashboard-columns { display: block; }
+  .officer-stats { grid-template-columns: 1fr; gap: 8px; }
+  .officer-columns { grid-template-columns: 1fr; gap: 0; }
+  .officer-panel, .officer-farmers { padding: 14px; }
+  .officer-advisory-form .button { width: 100%; }
+  .officer-district-filter input { flex: 1; }
   .dashboard-side { grid-template-columns: 1fr; gap: 0; }
   .content-section, .dashboard-side .content-section { margin-top: 23px; }
   .section-heading h2 { font-size: 15px; }

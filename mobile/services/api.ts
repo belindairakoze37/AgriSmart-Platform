@@ -31,6 +31,7 @@ export interface AuthUser {
   notification_preferences: {
     price_alerts: boolean;
     weather_alerts: boolean;
+    advisories: boolean;
     marketplace_offers: boolean;
   };
   profile_picture: string | null;

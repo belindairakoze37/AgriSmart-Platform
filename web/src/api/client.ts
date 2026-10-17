@@ -5,6 +5,7 @@ import axios, {
 import type {
   AdvisoryMessage,
   AdvisorySession,
+  AdvisoryDeliveryResult,
   AuthUser,
   Commodity,
   CreateListingData,
@@ -14,6 +15,7 @@ import type {
   LoginResponse,
   MarketPrice,
   Offer,
+  OfficerDashboard,
   Paginated,
   RegisterData,
   SendMessageResponse,
@@ -303,6 +305,28 @@ export const advisoryApi = {
       : '/advisory/chat/';
     return (
       await api.post<SendMessageResponse>(path, { content })
+    ).data;
+  },
+};
+
+export const officerApi = {
+  async getDashboard(district = ''): Promise<OfficerDashboard> {
+    return (
+      await api.get<OfficerDashboard>('/farmers/officers/dashboard/', {
+        params: district ? { district } : {},
+      })
+    ).data;
+  },
+  async sendAdvisory(data: {
+    title: string;
+    message: string;
+    district?: string;
+  }): Promise<AdvisoryDeliveryResult> {
+    return (
+      await api.post<AdvisoryDeliveryResult>(
+        '/farmers/officers/advisories/',
+        data,
+      )
     ).data;
   },
 };

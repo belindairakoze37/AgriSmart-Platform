@@ -166,3 +166,41 @@ export interface SendMessageResponse {
   user_message: AdvisoryMessage;
   ai_message: AdvisoryMessage;
 }
+
+export interface OfficerFarmer {
+  id: string;
+  user_id: string;
+  full_name: string;
+  phone_number: string;
+  district: string;
+  farm_size_acres: string | null;
+  primary_crops: string[];
+  farm_count: number;
+  active_listing_count: number;
+}
+
+export interface DiseaseOutbreak {
+  crop_type: string;
+  disease: string;
+  district: string;
+  reports: number;
+  farmers_affected: number;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface OfficerDashboard {
+  district: string | null;
+  farmer_count: number;
+  farm_count: number;
+  active_listing_count: number;
+  farmers: OfficerFarmer[];
+  farmers_truncated: boolean;
+  outbreaks: DiseaseOutbreak[];
+}
+
+export interface AdvisoryDeliveryResult {
+  district: string | null;
+  notified: number;
+  skipped_by_preferences: number;
+}

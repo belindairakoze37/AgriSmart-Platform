@@ -11,6 +11,7 @@ import {
   PackagePlus,
   ShoppingBasket,
   Sprout,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -37,6 +38,7 @@ import { MarketsPage } from './pages/MarketsPage';
 import { MarketDetailPage } from './pages/MarketDetailPage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { ProfilePage } from './pages/ProfilePage';
+import { OfficerPortalPage } from './pages/OfficerPortalPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,8 +78,12 @@ function AppShell() {
   const [signOutError, setSignOutError] = useState('');
   const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
+  const workspaceNavigation =
+    user?.role === 'admin' || user?.role === 'extension_officer'
+      ? [...navigation, { to: '/officer', label: 'Officer portal', Icon: UsersRound }]
+      : navigation;
   const pageLabel =
-    navigation.find((item) => location.pathname.startsWith(item.to))?.label ??
+    workspaceNavigation.find((item) => location.pathname.startsWith(item.to))?.label ??
     'AgriSmart';
 
   async function signOut() {
@@ -121,7 +127,7 @@ function AppShell() {
         <aside className={`sidebar${menuOpen ? ' sidebar-open' : ''}`} aria-label="Main navigation">
           <div className="sidebar-caption">WORKSPACE</div>
           <nav className="side-nav">
-            {navigation.map(({ to, label, Icon }) => (
+            {workspaceNavigation.map(({ to, label, Icon }) => (
               <NavLink
                 className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
                 key={to}
@@ -179,6 +185,14 @@ function NotFoundPage() {
   );
 }
 
+function RequireOfficerPortal() {
+  const { user } = useAuth();
+  if (user?.role !== 'admin' && user?.role !== 'extension_officer') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <OfficerPortalPage />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -198,6 +212,7 @@ export default function App() {
                 <Route path="/marketplace/create" element={<ListingCreatePage />} />
                 <Route path="/marketplace/:id" element={<ListingDetailPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/officer" element={<RequireOfficerPortal />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />

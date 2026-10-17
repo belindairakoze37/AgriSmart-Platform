@@ -21,7 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
             'full_name', 'role', 'preferred_language', 'profile_picture',
             'is_phone_verified', 'date_joined', 'notification_preferences'
         ]
-        read_only_fields = ['id', 'date_joined', 'is_phone_verified']
+        read_only_fields = ['id', 'date_joined', 'is_phone_verified', 'role']
     
     def get_full_name(self, obj):
         return obj.get_full_name()
@@ -30,6 +30,7 @@ class UserSerializer(serializers.ModelSerializer):
         allowed_preferences = {
             'price_alerts',
             'weather_alerts',
+            'advisories',
             'marketplace_offers',
         }
         if not isinstance(value, dict) or any(
@@ -66,6 +67,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password": "Passwords don't match"})
         return attrs
+
+    def validate_role(self, value):
+        if value not in (User.Role.FARMER, User.Role.BUYER):
+            raise serializers.ValidationError(
+                'Extension officer and administrator accounts must be provisioned by an administrator.'
+            )
+        return value
     
     def create(self, validated_data):
         validated_data.pop('password_confirm')

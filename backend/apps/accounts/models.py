@@ -8,6 +8,7 @@ def default_notification_preferences():
     return {
         'price_alerts': True,
         'weather_alerts': True,
+        'advisories': True,
         'marketplace_offers': True,
     }
 

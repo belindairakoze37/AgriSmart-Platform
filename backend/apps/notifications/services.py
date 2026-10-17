@@ -3,8 +3,9 @@ from .models import Notification
 
 PREFERENCE_BY_NOTIFICATION_TYPE = {
     Notification.NotificationType.MARKET_PRICE: 'price_alerts',
+    Notification.NotificationType.WEATHER: 'weather_alerts',
     Notification.NotificationType.MARKETPLACE: 'marketplace_offers',
-    Notification.NotificationType.ADVISORY: 'weather_alerts',
+    Notification.NotificationType.ADVISORY: 'advisories',
 }
 
 

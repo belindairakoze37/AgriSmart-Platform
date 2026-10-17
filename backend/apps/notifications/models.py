@@ -9,6 +9,7 @@ class Notification(models.Model):
 
     class NotificationType(models.TextChoices):
         MARKET_PRICE = 'market_price', 'Market Price'
+        WEATHER = 'weather', 'Weather'
         ADVISORY = 'advisory', 'Advisory'
         DISEASE = 'disease', 'Disease'
         MARKETPLACE = 'marketplace', 'Marketplace'

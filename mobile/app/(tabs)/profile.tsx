@@ -207,6 +207,17 @@ export default function ProfileScreen() {
         />
         <PreferenceSwitch
           disabled={preferencesMutation.isPending}
+          label="Extension advisories"
+          onValueChange={(enabled) =>
+            preferencesMutation.mutate({
+              ...user.notification_preferences,
+              advisories: enabled,
+            })
+          }
+          value={user.notification_preferences.advisories}
+        />
+        <PreferenceSwitch
+          disabled={preferencesMutation.isPending}
           label="Marketplace offers"
           onValueChange={(enabled) =>
             preferencesMutation.mutate({

@@ -71,7 +71,7 @@ class FarmerWeatherTests(TestCase):
         self.assertEqual(
             Notification.objects.filter(
                 user=self.user,
-                notification_type=Notification.NotificationType.ADVISORY,
+                notification_type=Notification.NotificationType.WEATHER,
             ).count(),
             1,
         )
@@ -79,7 +79,7 @@ class FarmerWeatherTests(TestCase):
         self.assertEqual(
             Notification.objects.filter(
                 user=self.user,
-                notification_type=Notification.NotificationType.ADVISORY,
+                notification_type=Notification.NotificationType.WEATHER,
             ).count(),
             1,
         )

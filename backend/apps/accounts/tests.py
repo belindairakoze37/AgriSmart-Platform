@@ -36,6 +36,28 @@ class AuthAPITests(APITestCase):
         self.assertIn('access', response.data['tokens'])
         self.assertTrue(User.objects.filter(phone_number='+256700000002').exists())
 
+    def test_register_cannot_create_privileged_roles(self):
+        for role in ('extension_officer', 'admin'):
+            with self.subTest(role=role):
+                response = self.client.post(
+                    reverse('register'),
+                    {
+                        'phone_number': '+256700000003',
+                        'first_name': 'Privileged',
+                        'password': 'StrongPass123!',
+                        'password_confirm': 'StrongPass123!',
+                        'role': role,
+                    },
+                    format='json',
+                )
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_400_BAD_REQUEST,
+                )
+                self.assertFalse(
+                    User.objects.filter(phone_number='+256700000003').exists()
+                )
+
     def test_login_returns_tokens_for_valid_credentials(self):
         payload = {
             'phone_number': '+256700000001',
@@ -65,6 +87,7 @@ class AuthAPITests(APITestCase):
             {
                 'price_alerts': True,
                 'weather_alerts': True,
+                'advisories': True,
                 'marketplace_offers': True,
             },
         )
@@ -85,6 +108,7 @@ class AuthAPITests(APITestCase):
             {
                 'price_alerts': False,
                 'weather_alerts': True,
+                'advisories': True,
                 'marketplace_offers': True,
             },
         )
@@ -119,3 +143,16 @@ class AuthAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertEqual(self.user.preferred_language, 'lg')
+
+    def test_profile_cannot_change_account_role(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse('profile'),
+            {'role': 'admin'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.role, 'farmer')

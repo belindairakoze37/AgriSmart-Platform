@@ -26,7 +26,7 @@ def create_weather_alert(user, data):
     today = timezone.localdate()
     if Notification.objects.filter(
         user=user,
-        notification_type=Notification.NotificationType.ADVISORY,
+        notification_type=Notification.NotificationType.WEATHER,
         title='Heavy rain forecast',
         created_at__date=today,
     ).exists():
@@ -38,7 +38,7 @@ def create_weather_alert(user, data):
             f"Heavy rain is forecast for {data['district']}. "
             'Avoid spraying pesticides before the rain.'
         ),
-        notification_type=Notification.NotificationType.ADVISORY,
+        notification_type=Notification.NotificationType.WEATHER,
         action_url='/',
         metadata={
             'district': data['district'],
