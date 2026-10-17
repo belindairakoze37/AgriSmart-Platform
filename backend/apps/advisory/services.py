@@ -2,7 +2,6 @@
 Smart Agricultural Advisor
 Uses rule-based + LLM hybrid approach for reliability
 """
-import os
 import re
 from typing import Dict, List, Optional
 from django.conf import settings
@@ -141,7 +140,11 @@ class AdvisoryService:
     def __init__(self):
         self.client = None
         if settings.OPENAI_API_KEY:
-            self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            self.client = OpenAI(
+                api_key=settings.OPENAI_API_KEY,
+                timeout=10.0,
+                max_retries=0,
+            )
     
     def classify_intent(self, message: str) -> str:
         """Simple keyword-based intent classification"""
@@ -216,11 +219,11 @@ class AdvisoryService:
             context,
         )
         
-        # Try LLM first if available
+        fallback_reason = 'not_configured'
         if self.client:
             try:
                 response = self.client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=settings.OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": self._get_system_prompt(language)},
                         {"role": "user", "content": prompt}
@@ -230,17 +233,33 @@ class AdvisoryService:
                 )
                 
                 content = response.choices[0].message.content
-                return {
-                    'content': content,
-                    'intent': intent,
-                    'sources': self._get_sources(intent),
-                    'confidence': 0.85,
-                }
-            except Exception as e:
-                logger.error(f"LLM error: {str(e)}")
+                if content and content.strip():
+                    return {
+                        'content': content.strip(),
+                        'intent': intent,
+                        'sources': self._get_sources(intent),
+                        'confidence': 0.85,
+                        'metadata': {
+                            'provider': 'openai',
+                            'mode': 'ai',
+                        },
+                    }
+                fallback_reason = 'empty_response'
+                logger.warning('OpenAI advisor returned an empty response.')
+            except Exception as error:
+                fallback_reason = 'provider_error'
+                logger.warning(
+                    'OpenAI advisor request failed (%s); using local guidance.',
+                    type(error).__name__,
+                )
         
-        # Fallback to rule-based
-        return self._rule_based_response(intent, resolved_crop, knowledge, language)
+        return self._rule_based_response(
+            intent,
+            resolved_crop,
+            knowledge,
+            language,
+            fallback_reason=fallback_reason,
+        )
     
     def _get_system_prompt(self, language: str) -> str:
         return f"""You are an expert agricultural extension officer in Uganda.
@@ -254,8 +273,12 @@ Be specific about:
 Use simple language. If unsure, say so and recommend consulting a local extension officer.
 Respond in {'English' if language == 'en' else language}.
 
-IMPORTANT: Always present advice as guidance, not guarantees. Mention that farmers should 
-verify with local extension officers for critical decisions."""
+IMPORTANT:
+- Present advice as guidance, not guarantees.
+- Never claim to have diagnosed a crop without enough information or an image.
+- Never invent product labels, pesticide rates, local weather, prices, or citations.
+- Ask a short follow-up when crop, symptoms, location, or growth stage is important.
+- Recommend local extension officers for severe outbreaks or chemical safety decisions."""
     
     def _build_prompt(self, message, crop, location, language, intent, knowledge, context) -> str:
         parts = [f"Farmer's question: {message}"]
@@ -287,7 +310,14 @@ verify with local extension officers for critical decisions."""
         }
         return sources.get(intent, ['General Agricultural Knowledge'])
     
-    def _rule_based_response(self, intent, crop, knowledge, language) -> Dict:
+    def _rule_based_response(
+        self,
+        intent,
+        crop,
+        knowledge,
+        language,
+        fallback_reason='not_configured',
+    ) -> Dict:
         """Fallback rule-based response"""
         if knowledge:
             content = self._format_knowledge(knowledge, intent, crop)
@@ -296,23 +326,77 @@ verify with local extension officers for critical decisions."""
                 'intent': intent,
                 'sources': self._get_sources(intent),
                 'confidence': 0.7,
+                'metadata': {
+                    'provider': 'rule_based',
+                    'mode': 'fallback',
+                    'fallback_reason': fallback_reason,
+                },
             }
         
-        content = (
-            "I don't have specific information for this question right now. "
-            "For accurate advice, please:\n\n"
-            "1. Contact your local agricultural extension officer\n"
-            "2. Visit the nearest MAAIF office\n"
-            "3. Call the agricultural helpline\n\n"
-            "You can also try rephrasing your question with more details about "
-            "your crop and location."
+        responses = {
+            'planting': (
+                f"For {crop or 'your crop'}, planting dates depend on your district, "
+                "rainfall, and variety. Prepare well-drained soil, use healthy seed, "
+                "and plant when the rains are established rather than into dry soil. "
+                "Tell me your district and crop variety for more specific guidance."
+            ),
+            'fertilizer': (
+                f"For {crop or 'your crop'}, fertilizer needs depend on soil and crop "
+                "stage. Use a soil test or local extension recommendation where possible, "
+                "apply only the rate on the product label, and keep fertilizer away from "
+                "direct contact with seed and stems. What crop and growth stage are you asking about?"
+            ),
+            'pest': (
+                f"For pests on {crop or 'your crop'}, inspect several plants and check "
+                "leaf undersides and growing points before choosing a control. Remove "
+                "small affected areas where practical, protect beneficial insects, and "
+                "use pesticides only when identified and label-approved. Describe the pest "
+                "and symptoms, and include your district."
+            ),
+            'disease': (
+                f"I can't confirm a disease on {crop or 'your crop'} from a text question "
+                "alone. Note which leaves are affected, the pattern and color of spots, "
+                "recent rain, and how quickly it is spreading. Remove severely affected "
+                "plant material where safe, avoid wetting foliage, and ask a local extension "
+                "officer to confirm before applying chemicals. Describe the symptoms and district."
+            ),
+            'harvest': (
+                f"For {crop or 'your crop'}, harvest timing varies by variety and use. "
+                "Check maturity signs across several plants and harvest in dry conditions "
+                "where possible. Dry produce promptly on a clean surface and store it off "
+                "the ground in a dry, ventilated place. Tell me the crop and planting date."
+            ),
+            'storage': (
+                f"To store {crop or 'your produce'}, dry it thoroughly, remove damaged or "
+                "infested material, and use clean, dry, pest-resistant storage. Keep bags "
+                "off the floor and inspect them regularly. What produce are you storing, "
+                "and is it grain, seed, or fresh produce?"
+            ),
+            'market': (
+                "Compare prices for the same crop, quality, unit, and date in nearby "
+                "markets. Include transport, handling, and storage costs before deciding "
+                "where to sell. Share your crop, district, quantity, and current offer price "
+                "so I can help you compare."
+            ),
+        }
+        content = responses.get(
+            intent,
+            "I can help with planting, crop care, pests, diseases, harvesting, storage, "
+            "and farm-market questions. Please tell me the crop, your district, what you "
+            "observe, and what you have already tried. For chemical use or a serious "
+            "outbreak, confirm recommendations with a local agricultural extension officer.",
         )
         
         return {
             'content': content,
             'intent': intent,
-            'sources': [],
-            'confidence': 0.3,
+            'sources': self._get_sources(intent),
+            'confidence': 0.45,
+            'metadata': {
+                'provider': 'rule_based',
+                'mode': 'fallback',
+                'fallback_reason': fallback_reason,
+            },
         }
     
     def _format_knowledge(self, knowledge: Dict, intent: str, crop: str) -> str:
