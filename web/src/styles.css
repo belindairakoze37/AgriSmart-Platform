@@ -15,6 +15,8 @@
   --white: #fff;
   --red: #b93838;
   --shadow: 0 14px 40px rgb(34 66 39 / 7%);
+  --sidebar-width: 248px;
+  --workspace-gutter: clamp(24px, 3vw, 44px);
 }
 
 * { box-sizing: border-box; }
@@ -137,7 +139,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .avatar-link:hover { background: var(--green-deep); }
 .menu-toggle { display: none; }
 .workspace { display: flex; min-height: calc(100vh - 72px); }
-.sidebar { position: sticky; top: 72px; display: flex; width: 248px; height: calc(100vh - 72px); flex: 0 0 248px; flex-direction: column; padding: 25px 15px 17px; border-right: 1px solid var(--line); background: #fff; }
+.sidebar { position: sticky; top: 72px; display: flex; width: var(--sidebar-width); height: calc(100vh - 72px); flex: 0 0 var(--sidebar-width); flex-direction: column; padding: 25px 15px 17px; border-right: 1px solid var(--line); background: #fff; }
 .sidebar-caption, .history-panel-heading { display: flex; justify-content: space-between; color: #98a099; font-size: 9px; font-weight: 800; letter-spacing: 1.1px; }
 .sidebar-caption { padding: 3px 12px 13px; }
 .side-nav { display: flex; flex-direction: column; gap: 4px; }
@@ -153,7 +155,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .sidebar-user-copy > span { color: #8a948d; font-size: 10px; text-transform: capitalize; }
 .signout-link { width: 100%; }
 .sidebar-bottom .inline-error { font-size: 10px; }
-.main-content { width: min(100% - 60px, 1440px); min-width: 0; margin-inline: auto; padding: 34px 0 60px; }
+.main-content { flex: 1 1 0; width: auto; max-width: 1560px; min-width: 0; margin-inline: auto; padding: 34px var(--workspace-gutter) 60px; }
 .mobile-page-title { display: none; }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
 .page-header h1 { margin: 0; color: var(--green-deep); font-size: clamp(27px, 3vw, 34px); letter-spacing: -1.1px; }
@@ -467,11 +469,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .loading-page .brand-icon { margin-bottom: 13px; }
 
 @media (min-width: 1500px) {
-  .main-content { width: min(100% - 88px, 1500px); }
-  .sidebar { width: 265px; flex-basis: 265px; }
+  :root { --sidebar-width: 265px; }
 }
 @media (max-width: 1180px) {
-  .main-content { width: calc(100% - 44px); }
+  :root { --workspace-gutter: 28px; }
   .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-columns { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .dashboard-side { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
@@ -482,7 +483,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .sidebar { position: absolute; z-index: 15; top: 64px; right: 12px; left: 12px; display: none; width: auto; height: auto; max-height: calc(100vh - 82px); overflow-y: auto; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
   .sidebar.sidebar-open { display: flex; }
   .menu-toggle { display: inline-grid; }
-  .main-content { width: min(100% - 34px, 850px); padding-top: 18px; }
+  .main-content { width: 100%; max-width: 1000px; padding: 20px 22px 48px; }
   .mobile-page-title { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; color: #7d8a7f; font-size: 10px; font-weight: 700; }
   .page-header { align-items: flex-start; }
   .page-header h1 { font-size: 28px; }
@@ -527,7 +528,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .topbar { padding-inline: 13px; }
   .topbar-greeting { display: none; }
   .avatar-link { width: 34px; height: 34px; }
-  .main-content { width: calc(100% - 28px); padding-top: 14px; }
+  .main-content { max-width: none; padding: 14px 16px 40px; }
   .mobile-page-title { margin-bottom: 13px; }
   .page-header { flex-direction: column; gap: 13px; margin-bottom: 18px; }
   .page-header h1 { font-size: 26px; }
