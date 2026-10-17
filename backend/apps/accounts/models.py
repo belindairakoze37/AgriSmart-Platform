@@ -31,7 +31,12 @@ class User(AbstractUser):
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
     
     USERNAME_FIELD = 'phone_number'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = []
+
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.phone_number
+        super().save(*args, **kwargs)
     
     class Meta:
         db_table = 'users'
