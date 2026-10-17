@@ -180,6 +180,13 @@ function MessageBubble({ message }: { message: AdvisoryMessage }) {
       {!isUser ? <span className="message-avatar"><Sprout size={14} aria-hidden="true" /></span> : null}
       <div className={`message-bubble${isUser ? ' user-bubble' : ' advisor-bubble'}`}>
         <p>{message.content}</p>
+        {!isUser && message.metadata.mode === 'fallback' ? (
+          <small className="advisor-mode-note">
+            {message.metadata.fallback_reason === 'not_configured'
+              ? 'Offline guidance · Configure OPENAI_API_KEY on the backend to enable AI answers.'
+              : 'AI is temporarily unavailable · Showing offline guidance.'}
+          </small>
+        ) : null}
         {!isUser && message.sources.length ? <small className="message-sources">Sources: {message.sources.join(', ')}</small> : null}
         <time dateTime={message.created_at}>{formatDate(message.created_at)}</time>
       </div>
