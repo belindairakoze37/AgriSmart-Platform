@@ -1,20 +1,45 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LogOut, MapPin, Phone, UserRound } from 'lucide-react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { ArrowRight, LogOut, MapPin, Phone, Sprout, UserRound } from 'lucide-react-native';
 import { FeedbackState } from '../../components/FeedbackState';
 import { LoadingState } from '../../components/LoadingState';
 import { Screen } from '../../components/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors } from '../../constants/theme';
+import { farmApi, getApiErrorMessage } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const [district, setDistrict] = useState('');
   const user = useAuthStore((state) => state.user);
   const isLoading = useAuthStore((state) => state.isLoading);
   const authError = useAuthStore((state) => state.authError);
   const logout = useAuthStore((state) => state.logout);
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const farmerProfileQuery = useQuery({
+    queryKey: ['farmer-profile'],
+    queryFn: async () => (await farmApi.getProfile()).data,
+  });
+  const locationMutation = useMutation({
+    mutationFn: () =>
+      farmApi.updateProfile({
+        district: district.trim() || farmerProfileQuery.data?.district || '',
+        sub_county: farmerProfileQuery.data?.sub_county ?? '',
+        village: farmerProfileQuery.data?.village ?? '',
+      }),
+    onSuccess: async (response) => {
+      setDistrict(response.data.district);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['farmer-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['farmer-weather'] }),
+      ]);
+      Alert.alert('Location saved', 'Weather information will use this district when map coordinates are available.');
+    },
+  });
 
   const confirmLogout = () => {
     Alert.alert('Sign out?', 'You will need to sign in again to use your account.', [
@@ -104,6 +129,59 @@ export default function ProfileScreen() {
         />
       </View>
 
+      <View style={styles.locationCard}>
+        <View style={styles.locationHeading}>
+          <MapPin color={colors.primary} size={18} />
+          <Text style={styles.locationTitle}>Farm district</Text>
+        </View>
+        <Text style={styles.locationHelp}>
+          Use the district name in AgriSmart markets to connect local weather and farm information.
+        </Text>
+        <TextInput
+          accessibilityLabel="Farm district"
+          autoCapitalize="words"
+          maxLength={100}
+          onChangeText={setDistrict}
+          placeholder="e.g. Gulu"
+          placeholderTextColor="#9CA3AF"
+          style={styles.locationInput}
+          value={district || farmerProfileQuery.data?.district || ''}
+        />
+        {farmerProfileQuery.isError ? (
+          <Text style={styles.locationError}>
+            Could not load farm details: {getApiErrorMessage(farmerProfileQuery.error)}
+          </Text>
+        ) : null}
+        {locationMutation.isError ? (
+          <Text style={styles.locationError}>
+            Could not save district: {getApiErrorMessage(locationMutation.error)}
+          </Text>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          disabled={locationMutation.isPending || !(district || farmerProfileQuery.data?.district)}
+          onPress={() => locationMutation.mutate()}
+          style={[styles.saveLocation, locationMutation.isPending && styles.disabled]}
+        >
+          <Text style={styles.saveLocationText}>
+            {locationMutation.isPending ? 'Saving…' : 'Save farm district'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push('/farms')}
+        style={({ pressed }) => [styles.farmLink, pressed && styles.pressed]}
+      >
+        <View style={styles.farmLinkIcon}><Sprout color={colors.primary} size={18} /></View>
+        <View style={styles.farmLinkCopy}>
+          <Text style={styles.farmLinkTitle}>Manage farms and crops</Text>
+          <Text style={styles.farmLinkText}>Track plots, planted area, and harvests.</Text>
+        </View>
+        <ArrowRight color={colors.primary} size={17} />
+      </Pressable>
+
       <Pressable
         accessibilityRole="button"
         onPress={confirmLogout}
@@ -186,6 +264,20 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingHorizontal: 15,
   },
+  locationCard: { backgroundColor: colors.white, borderRadius: 16, gap: 10, marginTop: 14, padding: 15 },
+  locationHeading: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  locationTitle: { color: colors.darkGreen, fontSize: 14, fontWeight: '800' },
+  locationHelp: { color: colors.muted, fontSize: 11, lineHeight: 16 },
+  locationInput: { borderColor: colors.border, borderRadius: 11, borderWidth: 1, color: colors.text, minHeight: 45, paddingHorizontal: 12 },
+  locationError: { color: colors.error, fontSize: 11, lineHeight: 16 },
+  saveLocation: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 10, justifyContent: 'center', minHeight: 40 },
+  saveLocationText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
+  disabled: { opacity: 0.5 },
+  farmLink: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 15, flexDirection: 'row', gap: 11, marginTop: 14, minHeight: 66, paddingHorizontal: 13 },
+  farmLinkIcon: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 11, height: 36, justifyContent: 'center', width: 36 },
+  farmLinkCopy: { flex: 1 },
+  farmLinkTitle: { color: colors.darkGreen, fontSize: 12, fontWeight: '800' },
+  farmLinkText: { color: colors.muted, fontSize: 10, marginTop: 4 },
   detailRow: {
     alignItems: 'center',
     borderBottomColor: colors.border,

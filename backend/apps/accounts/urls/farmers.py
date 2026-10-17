@@ -1,7 +1,9 @@
 from django.urls import path
 from .. import views
+from apps.core.weather import current_weather
 
 urlpatterns = [
+    path('weather/', current_weather, name='farmer-weather'),
     path('profile/', views.FarmerProfileView.as_view(), name='farmer-profile'),
     path('farms/', views.FarmListCreateView.as_view(), name='farm-list'),
     path('farms/<uuid:pk>/', views.FarmDetailView.as_view(), name='farm-detail'),

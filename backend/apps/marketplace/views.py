@@ -1,13 +1,15 @@
 from django.db.models import Q
+from django.db import transaction
 from rest_framework import generics, permissions, serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from apps.accounts.models import FarmerProfile
+from apps.notifications.models import Notification
 from .models import Listing, Offer, Transaction
 from .serializers import (
     ListingSerializer, ListingCreateSerializer,
-    OfferSerializer, TransactionSerializer
+    OfferSerializer, OfferStatusSerializer, TransactionSerializer
 )
 
 
@@ -133,7 +135,18 @@ class OfferListCreateView(generics.ListCreateAPIView):
                 f"Only {listing.quantity_kg}kg available"
             )
         
-        serializer.save(buyer=self.request.user)
+        offer = serializer.save(buyer=self.request.user, status=Offer.Status.PENDING)
+        Notification.objects.create(
+            user=listing.farmer.user,
+            title='New offer on your listing',
+            message=(
+                f'{offer.buyer.get_full_name() or offer.buyer.phone_number} offered '
+                f'UGX {offer.offered_price_per_kg}/kg for {offer.quantity_kg} kg '
+                f'of {listing.title}.'
+            ),
+            notification_type=Notification.NotificationType.MARKETPLACE,
+            action_url='/marketplace/offers',
+        )
 
 
 class OfferDetailView(generics.RetrieveUpdateAPIView):
@@ -146,21 +159,36 @@ class OfferDetailView(generics.RetrieveUpdateAPIView):
         return Offer.objects.filter(
             Q(buyer=user) | Q(listing__farmer__user=user)
         )
-    
+
+    def get_serializer_class(self):
+        if self.request.method in ('PUT', 'PATCH'):
+            return OfferStatusSerializer
+        return OfferSerializer
+
     def update(self, request, *args, **kwargs):
         offer = self.get_object()
-        
-        # Only listing owner can accept/reject
         new_status = request.data.get('status')
-        if new_status in ['accepted', 'rejected']:
-            if offer.listing.farmer.user != request.user:
-                return Response(
-                    {'error': 'Only the listing owner can accept or reject offers'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            
-            if new_status == 'accepted':
-                # Create transaction
+        if offer.listing.farmer.user != request.user:
+            return Response(
+                {'error': 'Only the listing owner can accept or reject offers'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if offer.status != Offer.Status.PENDING:
+            return Response(
+                {'error': 'Only pending offers can be accepted or rejected'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if (
+            new_status == Offer.Status.ACCEPTED
+            and offer.listing.status != Listing.Status.ACTIVE
+        ):
+            return Response(
+                {'error': 'This listing is no longer available'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            if new_status == Offer.Status.ACCEPTED:
                 total = offer.offered_price_per_kg * offer.quantity_kg
                 Transaction.objects.create(
                     listing=offer.listing,
@@ -168,16 +196,27 @@ class OfferDetailView(generics.RetrieveUpdateAPIView):
                     final_price_per_kg=offer.offered_price_per_kg,
                     total_amount=total,
                 )
-                # Mark listing as sold
                 offer.listing.status = Listing.Status.SOLD
-                offer.listing.save()
-                
-                # Reject other pending offers
+                offer.listing.save(update_fields=['status', 'updated_at'])
                 offer.listing.offers.filter(
                     status=Offer.Status.PENDING
                 ).exclude(pk=offer.pk).update(status=Offer.Status.REJECTED)
-        
-        return super().update(request, *args, **kwargs)
+
+            response = super().update(request, *args, **kwargs)
+            Notification.objects.create(
+                user=offer.buyer,
+                title=(
+                    'Your offer was accepted'
+                    if new_status == Offer.Status.ACCEPTED
+                    else 'Your offer was declined'
+                ),
+                message=(
+                    f'The seller {new_status} your offer for {offer.listing.title}.'
+                ),
+                notification_type=Notification.NotificationType.MARKETPLACE,
+                action_url=f'/marketplace/{offer.listing_id}',
+            )
+            return response
 
 
 class MyOffersView(generics.ListAPIView):

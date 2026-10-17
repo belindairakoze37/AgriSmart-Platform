@@ -19,10 +19,17 @@ import { LoadingState } from '../../components/LoadingState';
 import { colors } from '../../constants/theme';
 import {
   advisoryApi,
+  farmApi,
   getApiErrorMessage,
   toArray,
   type AdvisoryMessage,
 } from '../../services/api';
+
+const suggestedPrompts = [
+  'When should I plant maize?',
+  'How can I control Fall Armyworm?',
+  'What fertilizer works well for beans?',
+];
 
 export default function AdvisoryScreen() {
   const queryClient = useQueryClient();
@@ -30,6 +37,10 @@ export default function AdvisoryScreen() {
   const [sessionId, setSessionId] = useState<string>();
   const [draft, setDraft] = useState('');
   const [sendError, setSendError] = useState<string>();
+  const farmProfileQuery = useQuery({
+    queryKey: ['farmer-profile'],
+    queryFn: async () => (await farmApi.getProfile()).data,
+  });
   const sessionsQuery = useQuery({
     queryKey: ['advisory', 'sessions'],
     queryFn: async () =>
@@ -48,8 +59,15 @@ export default function AdvisoryScreen() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: ({ content, currentSessionId }: { content: string; currentSessionId?: string }) =>
-      advisoryApi.sendMessage(content, currentSessionId),
+    mutationFn: ({
+      content,
+      currentSessionId,
+      context,
+    }: {
+      content: string;
+      currentSessionId?: string;
+      context?: { crop_type?: string; location?: string };
+    }) => advisoryApi.sendMessage(content, currentSessionId, context),
     onSuccess: ({ data }) => {
       setSessionId(data.session_id);
       setSendError(undefined);
@@ -76,7 +94,18 @@ export default function AdvisoryScreen() {
     if (!content || sendMutation.isPending) return;
     setDraft('');
     setSendError(undefined);
-    sendMutation.mutate({ content, currentSessionId: activeSessionId });
+    sendMutation.mutate({
+      content,
+      currentSessionId: activeSessionId,
+      context: {
+        ...(farmProfileQuery.data?.primary_crops.length
+          ? { crop_type: farmProfileQuery.data.primary_crops.join(', ') }
+          : {}),
+        ...(farmProfileQuery.data?.district
+          ? { location: farmProfileQuery.data.district }
+          : {}),
+      },
+    });
   };
 
   return (
@@ -172,12 +201,29 @@ export default function AdvisoryScreen() {
                   Ask about planting, crop care, pests, diseases, or harvesting.
                   The advisor will use the backend’s agricultural guidance service.
                 </Text>
-                <View style={styles.suggestion}>
-                  <Text style={styles.suggestionText}>
-                    “When is the best time to plant maize?”
+                  {farmProfileQuery.data?.district || farmProfileQuery.data?.primary_crops.length ? (
+                    <Text style={styles.contextHint}>
+                      Farm context: {[farmProfileQuery.data.district, ...farmProfileQuery.data.primary_crops].filter(Boolean).join(' · ')}
                   </Text>
+                  ) : null}
+                  {farmProfileQuery.isError ? (
+                    <Text style={styles.contextWarning}>
+                      Farm location and crop context could not be loaded.
+                    </Text>
+                  ) : null}
+                  <View style={styles.promptGrid}>
+                    {suggestedPrompts.map((prompt) => (
+                      <Pressable
+                        accessibilityRole="button"
+                        key={prompt}
+                        onPress={() => setDraft(prompt)}
+                        style={styles.prompt}
+                      >
+                        <Text style={styles.suggestionText}>{prompt}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
-              </View>
             }
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             ref={listRef}
@@ -285,8 +331,11 @@ const styles = StyleSheet.create({
   welcomeIcon: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 28, height: 56, justifyContent: 'center', width: 56 },
   welcomeTitle: { color: colors.darkGreen, fontSize: 18, fontWeight: '800', marginTop: 16, textAlign: 'center' },
   welcomeText: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 8, textAlign: 'center' },
-  suggestion: { backgroundColor: colors.white, borderColor: colors.border, borderRadius: 13, borderWidth: 1, marginTop: 17, padding: 12 },
-  suggestionText: { color: colors.primary, fontSize: 12, fontStyle: 'italic', textAlign: 'center' },
+  contextHint: { color: colors.primary, fontSize: 10, lineHeight: 15, marginTop: 12, textAlign: 'center' },
+  contextWarning: { color: colors.warning, fontSize: 10, marginTop: 8, textAlign: 'center' },
+  promptGrid: { alignSelf: 'stretch', gap: 8, marginTop: 15 },
+  prompt: { backgroundColor: colors.white, borderColor: colors.border, borderRadius: 13, borderWidth: 1, padding: 11 },
+  suggestionText: { color: colors.primary, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   messageRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 7, marginBottom: 13 },
   userRow: { justifyContent: 'flex-end' },
   messageAvatar: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 15, height: 29, justifyContent: 'center', width: 29 },

@@ -68,6 +68,35 @@ export interface District {
   longitude: number | null;
 }
 
+export interface PriceAlert {
+  id: string;
+  commodity: string;
+  commodity_name: string;
+  market: string | null;
+  market_name: string | null;
+  target_price: string;
+  condition: 'above' | 'below';
+  is_active: boolean;
+  triggered_at: string | null;
+  created_at: string;
+}
+
+export interface PriceForecast {
+  id: string;
+  commodity: string;
+  commodity_name: string;
+  market: string | null;
+  market_name: string | null;
+  forecast_date: string;
+  target_date: string;
+  predicted_price: string;
+  lower_bound: string;
+  upper_bound: string;
+  confidence: number;
+  model_type: string;
+  created_at: string;
+}
+
 export interface CurrentPrice {
   market_id: string;
   market_name: string;
@@ -133,6 +162,93 @@ export interface Listing {
   offers_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Offer {
+  id: string;
+  listing: string;
+  listing_title: string;
+  buyer: string;
+  buyer_name: string;
+  buyer_phone: string;
+  offered_price_per_kg: string;
+  quantity_kg: string;
+  pickup_date: string | null;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Farm {
+  id: string;
+  name: string;
+  size_acres: string;
+  latitude: string | null;
+  longitude: string | null;
+  soil_type: string;
+  irrigation_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FarmerProfile {
+  id: string;
+  district: string;
+  sub_county: string;
+  village: string;
+  latitude: string | null;
+  longitude: string | null;
+  farm_size_acres: string | null;
+  farming_type: string;
+  years_of_experience: number | null;
+  primary_crops: string[];
+  has_smartphone: boolean;
+}
+
+export interface FarmerWeather {
+  location: string;
+  district: string;
+  temperature_c: number;
+  feels_like_c: number;
+  humidity_percent: number;
+  wind_speed_mps: number;
+  condition: string;
+  icon: string;
+  rainfall_next_24h_mm: number;
+  heavy_rain_warning: boolean;
+  advisory: string;
+  updated_at: string;
+}
+
+export interface Crop {
+  id: string;
+  farm: string;
+  crop_type: string;
+  variety: string;
+  area_acres: string;
+  planting_date: string | null;
+  expected_harvest_date: string | null;
+  actual_harvest_date: string | null;
+  growth_stage: string;
+  expected_yield_kg: string | null;
+  actual_yield_kg: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgriNotification {
+  id: string;
+  user: string;
+  title: string;
+  message: string;
+  notification_type: 'market_price' | 'advisory' | 'disease' | 'marketplace' | 'system';
+  is_read: boolean;
+  action_url: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  read_at: string | null;
 }
 
 export interface CreateListingData {
@@ -364,6 +480,28 @@ export const marketsApi = {
     }>('/markets/prices/history/', {
       params: { commodity: commodityId, months },
     }),
+  getPriceAlerts: () =>
+    api.get<PaginatedResponse<PriceAlert>>('/markets/alerts/'),
+  createPriceAlert: (data: {
+    commodity: string;
+    target_price: number;
+    condition: 'above' | 'below';
+    market?: string;
+  }) => api.post<PriceAlert>('/markets/alerts/', data),
+  updatePriceAlert: (id: string, isActive: boolean) =>
+    api.patch<PriceAlert>(`/markets/alerts/${id}/`, { is_active: isActive }),
+};
+
+export const forecastsApi = {
+  generate: (commodityId: string, horizon = 4) =>
+    api.get<{
+      commodity_id: string;
+      forecasts: PriceForecast[];
+      source: string;
+      disclaimer?: string;
+    }>('/forecasts/generate/', {
+      params: { commodity: commodityId, horizon },
+    }),
 };
 
 export const marketplaceApi = {
@@ -375,6 +513,12 @@ export const marketplaceApi = {
     api.get<PaginatedResponse<Listing>>('/marketplace/listings/mine/', {
       params: { page },
     }),
+  getOffers: (page = 1) =>
+    api.get<PaginatedResponse<Offer>>('/marketplace/offers/', {
+      params: { page },
+    }),
+  updateOfferStatus: (id: string, status: 'accepted' | 'rejected') =>
+    api.patch<Offer>(`/marketplace/offers/${id}/`, { status }),
   getListing: (id: string) => api.get<Listing>(`/marketplace/listings/${id}/`),
   createListing: async (data: CreateListingData, photoUris: string[] = []) => {
     if (photoUris.length === 0) {
@@ -408,6 +552,44 @@ export const marketplaceApi = {
     pickup_date?: string;
     message?: string;
   }) => api.post('/marketplace/offers/', data),
+};
+
+export const farmApi = {
+  getProfile: () => api.get<FarmerProfile>('/farmers/profile/'),
+  updateProfile: (data: Pick<FarmerProfile, 'district' | 'sub_county' | 'village'>) =>
+    api.patch<FarmerProfile>('/farmers/profile/', data),
+  getWeather: () => api.get<FarmerWeather>('/farmers/weather/'),
+  getFarms: () => api.get<PaginatedResponse<Farm>>('/farmers/farms/'),
+  createFarm: (data: Pick<Farm, 'name' | 'size_acres' | 'soil_type' | 'irrigation_type'>) =>
+    api.post<Farm>('/farmers/farms/', data),
+  updateFarm: (
+    id: string,
+    data: Pick<Farm, 'name' | 'size_acres' | 'soil_type' | 'irrigation_type'>,
+  ) => api.patch<Farm>(`/farmers/farms/${id}/`, data),
+  getCrops: (farmId?: string) =>
+    api.get<PaginatedResponse<Crop>>('/farmers/crops/', {
+      params: farmId ? { farm: farmId } : undefined,
+    }),
+  createCrop: (data: Pick<
+    Crop,
+    'farm' | 'crop_type' | 'variety' | 'area_acres' | 'planting_date' |
+    'expected_harvest_date' | 'growth_stage' | 'notes'
+  >) => api.post<Crop>('/farmers/crops/', data),
+  updateCrop: (
+    id: string,
+    data: Pick<
+      Crop,
+      'farm' | 'crop_type' | 'variety' | 'area_acres' | 'planting_date' |
+      'expected_harvest_date' | 'growth_stage' | 'notes'
+    >,
+  ) => api.patch<Crop>(`/farmers/crops/${id}/`, data),
+};
+
+export const notificationsApi = {
+  getUnread: () => api.get<PaginatedResponse<AgriNotification>>('/notifications/unread/'),
+  markAllRead: () => api.post<{ updated: number }>('/notifications/mark-all-read/'),
+  updateRead: (id: string, isRead: boolean) =>
+    api.patch<AgriNotification>(`/notifications/${id}/`, { is_read: isRead }),
 };
 
 export const diseasesApi = {

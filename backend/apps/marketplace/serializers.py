@@ -103,6 +103,16 @@ class OfferSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'buyer', 'status', 'created_at', 'updated_at']
 
 
+class OfferStatusSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(
+        choices=[Offer.Status.ACCEPTED, Offer.Status.REJECTED],
+    )
+
+    class Meta:
+        model = Offer
+        fields = ['status']
+
+
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction

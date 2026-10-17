@@ -11,6 +11,7 @@ class Notification(models.Model):
         MARKET_PRICE = 'market_price', 'Market Price'
         ADVISORY = 'advisory', 'Advisory'
         DISEASE = 'disease', 'Disease'
+        MARKETPLACE = 'marketplace', 'Marketplace'
         SYSTEM = 'system', 'System'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
