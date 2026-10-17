@@ -139,11 +139,11 @@ api.interceptors.response.use(
 );
 
 export const authApi = {
-  async login(phoneNumber: string, password: string): Promise<LoginResponse> {
+  async login(identifier: string, password: string): Promise<LoginResponse> {
     const csrf = await getCsrfToken();
     const response = await api.post<LoginResponse>(
       '/auth/web/login/',
-      { phone_number: phoneNumber, password },
+      { identifier, password },
       { headers: { 'X-CSRFToken': csrf } },
     );
     return response.data;
@@ -171,6 +171,14 @@ export const authApi = {
     'first_name' | 'last_name' | 'email' | 'preferred_language'
   >>): Promise<AuthUser> {
     const response = await api.patch<AuthUser>('/auth/profile/', data);
+    return response.data;
+  },
+  async updateProfilePicture(file: File): Promise<AuthUser> {
+    const data = new FormData();
+    data.append('profile_picture', file);
+    const response = await api.patch<AuthUser>('/auth/profile/', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
   async logout(): Promise<void> {

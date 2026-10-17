@@ -32,7 +32,7 @@ class BrowserAuthTests(TestCase):
         response = self.post(
             'web-login',
             {
-                'phone_number': '+256700000001',
+                'identifier': 'jane farmer',
                 'password': 'StrongPass123!',
             },
         )
@@ -45,6 +45,20 @@ class BrowserAuthTests(TestCase):
         self.assertTrue(cookie['httponly'])
         self.assertEqual(cookie['samesite'], 'Lax')
         self.assertEqual(cookie['path'], '/api/v1/auth/web/')
+
+    def test_browser_login_accepts_email(self):
+        self.user.email = 'jane@example.com'
+        self.user.save(update_fields=['email'])
+        response = self.post(
+            'web-login',
+            {
+                'identifier': 'JANE@example.com',
+                'password': 'StrongPass123!',
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('agrismart_refresh', response.cookies)
 
     def test_refresh_rotates_cookie_and_returns_access_token(self):
         login_response = self.post(

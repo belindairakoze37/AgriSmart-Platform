@@ -453,12 +453,22 @@ api.interceptors.response.use(
 export const authApi = {
   register: (data: RegisterData) =>
     api.post<AuthResponse>('/auth/register/', data),
-  login: (phone: string, password: string) =>
-    api.post<AuthResponse>('/auth/login/', {
-      phone_number: phone,
-      password,
-    }),
+  login: (identifier: string, password: string) =>
+    api.post<AuthResponse>('/auth/login/', { identifier, password }),
   getProfile: () => api.get<AuthUser>('/auth/profile/'),
+  updateProfilePicture: async (uri: string) => {
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error('The selected profile photo could not be read.');
+    }
+    const formData = new FormData();
+    formData.append('profile_picture', await response.blob(), 'profile-picture.jpg');
+    return api.patch<AuthUser>(
+      '/auth/profile/',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
   updateProfile: (data: {
     preferred_language?: 'en' | 'lg' | 'sw';
     notification_preferences?: AuthUser['notification_preferences'];

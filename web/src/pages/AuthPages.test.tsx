@@ -75,15 +75,15 @@ describe('browser sign-in page', () => {
     renderLogin();
     const signIn = await screen.findByRole('button', { name: 'Sign in' });
     fireEvent.click(signIn);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Enter a valid phone number.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter your name, email, or phone number.');
     expect(authMocks.login).not.toHaveBeenCalled();
   });
 
-  it('authenticates and navigates to the protected dashboard', async () => {
+  it('authenticates with an email and navigates to the protected dashboard', async () => {
     renderLogin();
     await screen.findByRole('button', { name: 'Sign in' });
-    fireEvent.change(screen.getByLabelText('Phone number'), {
-      target: { value: '+256700000001' },
+    fireEvent.change(screen.getByLabelText('Name, email, or phone number'), {
+      target: { value: 'jane@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: 'StrongPass123!' },
@@ -91,7 +91,7 @@ describe('browser sign-in page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(await screen.findByRole('heading', { name: 'Protected dashboard' })).toBeInTheDocument();
-    await waitFor(() => expect(authMocks.login).toHaveBeenCalledWith('+256700000001', 'StrongPass123!'));
+    await waitFor(() => expect(authMocks.login).toHaveBeenCalledWith('jane@example.com', 'StrongPass123!'));
     expect(authMocks.setAccessToken).toHaveBeenCalledWith('memory-access-token');
   });
 });

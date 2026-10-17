@@ -5,12 +5,13 @@ export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   restorationError: string | null;
-  login: (phoneNumber: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   updateProfile: (data: Partial<Pick<
     AuthUser,
     'first_name' | 'last_name' | 'email' | 'preferred_language'
   >>) => Promise<void>;
+  updateProfilePicture: (file: File) => Promise<void>;
   logout: () => Promise<void>;
 }
 

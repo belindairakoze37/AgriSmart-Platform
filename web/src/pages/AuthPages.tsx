@@ -7,7 +7,7 @@ import type { RegisterData } from '../api/types';
 import { useAuth } from '../auth/useAuth';
 
 const loginSchema = z.object({
-  phone_number: z.string().trim().min(9, 'Enter a valid phone number.').max(17),
+  identifier: z.string().trim().min(1, 'Enter your name, email, or phone number.').max(254),
   password: z.string().min(1, 'Enter your password.'),
 });
 
@@ -59,7 +59,7 @@ export function LoginPage() {
   const { user, isLoading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -69,14 +69,14 @@ export function LoginPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    const parsed = loginSchema.safeParse({ phone_number: phone, password });
+    const parsed = loginSchema.safeParse({ identifier, password });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Check your sign-in details.');
       return;
     }
     setBusy(true);
     try {
-      await login(parsed.data.phone_number, parsed.data.password);
+      await login(parsed.data.identifier, parsed.data.password);
       const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
       navigate(destination && destination.startsWith('/') ? destination : '/dashboard', { replace: true });
     } catch (requestError) {
@@ -90,18 +90,17 @@ export function LoginPage() {
     <AuthFrame>
       <p className="eyebrow">WELCOME BACK</p>
       <h2>Sign in to AgriSmart</h2>
-      <p className="form-intro">Use the phone number linked to your AgriSmart account.</p>
+      <p className="form-intro">Sign in with the name, email, or phone number linked to your AgriSmart account.</p>
       <form className="form-stack" onSubmit={(event) => void submit(event)} noValidate>
         <label className="field">
-          <span>Phone number</span>
+          <span>Name, email, or phone number</span>
           <input
-            autoComplete="tel"
-            inputMode="tel"
-            name="phone_number"
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="+256 700 000 000"
+            autoComplete="username"
+            name="identifier"
+            onChange={(event) => setIdentifier(event.target.value)}
+            placeholder="Jane Farmer or jane@example.com"
             required
-            value={phone}
+            value={identifier}
           />
         </label>
         <label className="field">

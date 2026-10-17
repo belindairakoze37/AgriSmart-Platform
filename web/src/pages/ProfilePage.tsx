@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { z } from 'zod';
-import { Check, CircleUserRound, Phone, ShieldCheck } from 'lucide-react';
+import { Check, CircleUserRound, ImagePlus, Phone, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { getApiErrorMessage } from '../api/client';
 import { PageHeader } from '../components/Feedback';
@@ -13,12 +13,58 @@ const profileSchema = z.object({
 });
 
 export function ProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, updateProfilePicture } = useAuth();
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pictureFile, setPictureFile] = useState<File | null>(null);
+  const [picturePreview, setPicturePreview] = useState('');
+  const [pictureBusy, setPictureBusy] = useState(false);
+
+  useEffect(() => {
+    if (!pictureFile) {
+      setPicturePreview('');
+      return;
+    }
+    const preview = URL.createObjectURL(pictureFile);
+    setPicturePreview(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [pictureFile]);
 
   if (!user) return null;
+
+  function selectPicture(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Choose an image smaller than 5 MB.');
+      return;
+    }
+    setError('');
+    setMessage('');
+    setPictureFile(file);
+  }
+
+  async function savePicture() {
+    if (!pictureFile || pictureBusy) return;
+    setError('');
+    setMessage('');
+    setPictureBusy(true);
+    try {
+      await updateProfilePicture(pictureFile);
+      setPictureFile(null);
+      setMessage('Your profile picture was updated.');
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
+    } finally {
+      setPictureBusy(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,7 +96,35 @@ export function ProfilePage() {
       <PageHeader eyebrow="YOUR AGRISMART ACCOUNT" title="My profile" description="Manage the profile details associated with your shared AgriSmart account." />
       <div className="profile-layout">
         <section className="profile-summary-card">
-          {user.profile_picture ? <img alt="" className="profile-avatar-image" src={user.profile_picture} /> : <span className="profile-avatar">{initials}</span>}
+          {picturePreview || user.profile_picture ? (
+            <img
+              alt="Profile"
+              className="profile-avatar-image"
+              src={picturePreview || user.profile_picture || ''}
+            />
+          ) : <span className="profile-avatar">{initials}</span>}
+          <div className="profile-picture-actions">
+            <label className="button button-secondary profile-picture-choice" htmlFor="profile-picture">
+              <ImagePlus size={15} aria-hidden="true" />
+              Choose photo
+            </label>
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              id="profile-picture"
+              onChange={selectPicture}
+              type="file"
+            />
+            <button
+              className="button button-primary"
+              disabled={!pictureFile || pictureBusy}
+              onClick={() => void savePicture()}
+              type="button"
+            >
+              {pictureBusy ? 'Uploading…' : 'Save photo'}
+            </button>
+          </div>
+          <p className="profile-picture-help">JPEG, PNG, or WebP · max 5 MB</p>
           <h2>{user.full_name || `${user.first_name} ${user.last_name}`}</h2>
           <span className="role-badge">{user.role.replaceAll('_', ' ')}</span>
           <div className="profile-facts">

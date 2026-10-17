@@ -48,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [queryClient]);
 
-  const login = useCallback(async (phoneNumber: string, password: string) => {
-    const response = await authApi.login(phoneNumber, password);
+  const login = useCallback(async (identifier: string, password: string) => {
+    const response = await authApi.login(identifier, password);
     setAccessToken(response.access);
     setUser(response.user);
     setRestorationError(null);
@@ -70,6 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(updatedUser);
   }, []);
 
+  const updateProfilePicture = useCallback(async (file: File) => {
+    const updatedUser = await authApi.updateProfilePicture(file);
+    setUser(updatedUser);
+  }, []);
+
   const logout = useCallback(async () => {
     await authApi.logout();
     setUser(null);
@@ -78,8 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient]);
 
   const value = useMemo(
-    () => ({ user, isLoading, restorationError, login, register, updateProfile, logout }),
-    [user, isLoading, restorationError, login, register, updateProfile, logout],
+    () => ({
+      user,
+      isLoading,
+      restorationError,
+      login,
+      register,
+      updateProfile,
+      updateProfilePicture,
+      logout,
+    }),
+    [
+      user,
+      isLoading,
+      restorationError,
+      login,
+      register,
+      updateProfile,
+      updateProfilePicture,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

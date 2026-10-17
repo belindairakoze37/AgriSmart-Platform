@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 
+from .authentication import find_login_user
 from .models import FarmerProfile, Farm, Crop, OTPVerification
 from .serializers import (
     UserSerializer, RegisterSerializer, LoginSerializer,
@@ -49,21 +50,14 @@ def register(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def login(request):
-    """Login with phone number and password"""
+    """Login with an unambiguous account name, email address, or phone number."""
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
-        phone = serializer.validated_data['phone_number']
+        identifier = serializer.validated_data['identifier']
         password = serializer.validated_data['password']
-        
-        try:
-            user = User.objects.get(phone_number=phone)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'Invalid credentials'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
-        if not user.check_password(password):
+
+        user = find_login_user(identifier)
+        if not user or not user.check_password(password):
             return Response(
                 {'error': 'Invalid credentials'},
                 status=status.HTTP_401_UNAUTHORIZED

@@ -17,11 +17,11 @@ import { colors } from '../../constants/theme';
 import { useAuthStore } from '../../store/authStore';
 
 const schema = z.object({
-  phone: z
+  identifier: z
     .string()
     .trim()
-    .min(9, 'Enter a valid phone number.')
-    .max(17, 'Phone number is too long.'),
+    .min(1, 'Enter your name, email, or phone number.')
+    .max(254, 'Sign-in identifier is too long.'),
   password: z.string().min(1, 'Enter your password.'),
 });
 
@@ -37,11 +37,11 @@ export default function LoginScreen() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { phone: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
 
-  const submit = handleSubmit(async ({ phone, password }) => {
-    await login(phone, password);
+  const submit = handleSubmit(async ({ identifier, password }) => {
+    await login(identifier, password);
   });
 
   return (
@@ -68,16 +68,16 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <Controller
               control={control}
-              name="phone"
+              name="identifier"
               render={({ field: { onChange, value } }) => (
                 <FormInput
-                  autoComplete="tel"
-                  error={errors.phone?.message}
-                  keyboardType="phone-pad"
-                  label="Phone number"
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  error={errors.identifier?.message}
+                  label="Name, email, or phone number"
                   onChangeText={onChange}
-                  placeholder="+256 700 000 000"
-                  textContentType="telephoneNumber"
+                  placeholder="Jane Farmer or jane@example.com"
+                  textContentType="username"
                   value={value}
                 />
               )}

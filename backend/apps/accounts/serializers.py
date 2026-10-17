@@ -26,6 +26,23 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.get_full_name()
 
+    def validate_email(self, value):
+        existing_users = User.objects.filter(email__iexact=value) if value else User.objects.none()
+        if self.instance is not None:
+            existing_users = existing_users.exclude(pk=self.instance.pk)
+        if value and existing_users.exists():
+            raise serializers.ValidationError(
+                'An account with this email address already exists.'
+            )
+        return value
+
+    def validate_profile_picture(self, value):
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError(
+                'Profile pictures must be 5 MB or smaller.'
+            )
+        return value
+
     def validate_notification_preferences(self, value):
         allowed_preferences = {
             'price_alerts',
@@ -74,6 +91,13 @@ class RegisterSerializer(serializers.ModelSerializer):
                 'Extension officer and administrator accounts must be provisioned by an administrator.'
             )
         return value
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                'An account with this email address already exists.'
+            )
+        return value
     
     def create(self, validated_data):
         validated_data.pop('password_confirm')
@@ -86,8 +110,28 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
+    identifier = serializers.CharField(max_length=254, required=False)
+    phone_number = serializers.CharField(max_length=17, required=False)
     password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        identifier = attrs.get('identifier') or attrs.get('phone_number')
+        if not identifier:
+            raise serializers.ValidationError({
+                'identifier': 'Enter your name, email, or phone number.'
+            })
+        if (
+            attrs.get('identifier')
+            and attrs.get('phone_number')
+            and attrs['identifier'].strip() != attrs['phone_number'].strip()
+        ):
+            raise serializers.ValidationError({
+                'identifier': 'Provide one sign-in identifier.'
+            })
+        return {
+            'identifier': identifier.strip(),
+            'password': attrs['password'],
+        }
 
 
 class OTPRequestSerializer(serializers.Serializer):

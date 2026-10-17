@@ -437,6 +437,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .profile-layout { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr); align-items: start; gap: 16px; }
 .profile-summary-card { display: flex; flex-direction: column; align-items: center; padding: 27px 20px; text-align: center; }
 .profile-avatar, .profile-avatar-image { display: grid; width: 76px; height: 76px; place-items: center; border: 4px solid #edf6ec; border-radius: 27px; color: white; background: var(--green); font: 800 24px Manrope, sans-serif; object-fit: cover; }
+.profile-picture-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 13px; }
+.profile-picture-choice { display: inline-flex; align-items: center; gap: 6px; }
+.profile-picture-actions .button { min-height: 36px; padding-inline: 11px; font-size: 10px; }
+.profile-picture-help { margin: 7px 0 0; color: #89938c; font-size: 9px; }
 .profile-summary-card h2 { margin: 14px 0 7px; color: var(--green-deep); font-size: 17px; }
 .role-badge { padding-inline: 11px; }
 .profile-facts { display: grid; width: 100%; gap: 12px; margin-top: 23px; padding-top: 17px; border-top: 1px solid var(--line); text-align: left; }

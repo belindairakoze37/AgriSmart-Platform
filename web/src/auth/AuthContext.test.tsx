@@ -11,6 +11,7 @@ const authMocks = vi.hoisted(() => ({
   register: vi.fn(),
   restore: vi.fn(),
   updateProfile: vi.fn(),
+  updateProfilePicture: vi.fn(),
   setAccessToken: vi.fn(),
   setSessionExpiredHandler: vi.fn(),
 }));
@@ -22,6 +23,7 @@ vi.mock('../api/client', () => ({
     register: authMocks.register,
     restore: authMocks.restore,
     updateProfile: authMocks.updateProfile,
+    updateProfilePicture: authMocks.updateProfilePicture,
   },
   setAccessToken: authMocks.setAccessToken,
   setSessionExpiredHandler: authMocks.setSessionExpiredHandler,

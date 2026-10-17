@@ -13,6 +13,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .authentication import find_login_user
 from .serializers import LoginSerializer, RegisterSerializer, UserSerializer
 from .views import User, get_tokens_for_user
 
@@ -95,9 +96,7 @@ def register(request):
 def login(request):
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    user = User.objects.filter(
-        phone_number=serializer.validated_data['phone_number'],
-    ).first()
+    user = find_login_user(serializer.validated_data['identifier'])
     if (
         not user
         or not user.check_password(serializer.validated_data['password'])

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
-import { ArrowRight, LogOut, MapPin, Phone, Sprout, UserRound } from 'lucide-react-native';
+import { ArrowRight, Camera, LogOut, MapPin, Phone, Sprout, UserRound } from 'lucide-react-native';
 import { FeedbackState } from '../../components/FeedbackState';
 import { LoadingState } from '../../components/LoadingState';
 import { Screen } from '../../components/Screen';
@@ -49,6 +50,15 @@ export default function ProfileScreen() {
     onError: (error: unknown) =>
       Alert.alert('Could not save preferences', getApiErrorMessage(error)),
   });
+  const profilePictureMutation = useMutation({
+    mutationFn: (uri: string) => authApi.updateProfilePicture(uri),
+    onSuccess: (response) => {
+      updateUser(response.data);
+      Alert.alert('Profile picture updated', 'Your new photo is now on your account.');
+    },
+    onError: (error: unknown) =>
+      Alert.alert('Could not update profile picture', getApiErrorMessage(error)),
+  });
 
   const confirmLogout = () => {
     Alert.alert('Sign out?', 'You will need to sign in again to use your account.', [
@@ -68,6 +78,31 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const chooseProfilePicture = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Photo permission needed',
+        'Allow photo access to choose a profile picture.',
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const photo = result.assets[0];
+    if (!photo) return;
+    if (photo.fileSize && photo.fileSize > 5 * 1024 * 1024) {
+      Alert.alert('Photo is too large', 'Choose a profile picture smaller than 5 MB.');
+      return;
+    }
+    profilePictureMutation.mutate(photo.uri);
   };
 
   if (isLoading) return <LoadingState label="Loading your profile..." />;
@@ -99,12 +134,30 @@ export default function ProfileScreen() {
       />
       <View style={styles.profileCard}>
         {user.profile_picture ? (
-          <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
+          <Image
+            accessibilityLabel="Profile picture"
+            source={{ uri: user.profile_picture }}
+            style={styles.avatar}
+          />
         ) : (
           <View style={styles.avatar}>
             <Text style={styles.initials}>{initials}</Text>
           </View>
         )}
+        <Pressable
+          accessibilityRole="button"
+          disabled={profilePictureMutation.isPending}
+          onPress={() => void chooseProfilePicture()}
+          style={({ pressed }) => [
+            styles.changePictureButton,
+            (pressed || profilePictureMutation.isPending) && styles.disabled,
+          ]}
+        >
+          <Camera color={colors.primary} size={15} />
+          <Text style={styles.changePictureText}>
+            {profilePictureMutation.isPending ? 'Uploading photo…' : 'Change profile picture'}
+          </Text>
+        </Pressable>
         <Text style={styles.name}>
           {user.full_name ||
             [user.first_name, user.last_name].filter(Boolean).join(' ') ||
@@ -322,6 +375,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 76,
   },
+  changePictureButton: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 10, flexDirection: 'row', gap: 7, marginTop: 12, minHeight: 36, paddingHorizontal: 12 },
+  changePictureText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
   initials: { color: colors.primary, fontSize: 25, fontWeight: '900' },
   name: {
     color: colors.darkGreen,
