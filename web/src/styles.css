@@ -423,6 +423,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .message-bubble time { display: block; margin-top: 7px; color: #9ba59e; font-size: 8px; }
 .user-bubble time { color: #d5ead5; }
 .message-sources { display: block; margin-top: 8px; color: #829087; font-size: 9px; }
+.advisor-mode-note { display: block; margin-top: 8px; color: #856c31; font-size: 9px; line-height: 1.5; }
 .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #80ad83; box-shadow: 12px 0 #a2c6a4, 24px 0 #c4d9c5; }
 .chat-composer { display: flex; align-items: flex-end; gap: 9px; margin: 0 15px; padding: 7px; border: 1px solid #dfe6df; border-radius: 14px; background: white; }
 .chat-composer:focus-within { border-color: #78ad7c; box-shadow: 0 0 0 3px rgb(46 125 50 / 8%); }
