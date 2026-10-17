@@ -281,6 +281,13 @@ export default function AdvisoryScreen() {
                       Sources: {item.sources.join(', ')}
                     </Text>
                   ) : null}
+                  {item.sender === 'ai' && item.metadata.mode === 'fallback' ? (
+                    <Text style={styles.fallbackNote}>
+                      {item.metadata.fallback_reason === 'not_configured'
+                        ? 'Offline guidance. Configure OPENAI_API_KEY on the backend to enable AI answers.'
+                        : 'AI is temporarily unavailable. Showing offline guidance.'}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
             )}
@@ -369,6 +376,7 @@ const styles = StyleSheet.create({
   messageText: { color: colors.text, fontSize: 14, lineHeight: 21 },
   userMessageText: { color: colors.white },
   sources: { color: colors.muted, fontSize: 10, lineHeight: 15, marginTop: 9 },
+  fallbackNote: { color: colors.warning, fontSize: 10, lineHeight: 15, marginTop: 8 },
   messageError: { flex: 1, justifyContent: 'center', padding: 20 },
   thinking: { alignItems: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 18, paddingVertical: 8 },
   thinkingText: { color: colors.muted, fontSize: 12 },
