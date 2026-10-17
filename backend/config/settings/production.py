@@ -21,12 +21,14 @@ DATABASES = {
     }
 }
 
-CORS_ALLOWED_ORIGINS = config(
+API_CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='https://app.agrismart.ug,https://admin.agrismart.ug',
     cast=lambda value: [origin.strip() for origin in value.split(',') if origin.strip()],
 )
+CORS_ALLOWED_ORIGINS = API_CORS_ALLOWED_ORIGINS + WEB_APP_ORIGINS
 CORS_ALLOW_ALL_ORIGINS = False
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True

@@ -23,8 +23,10 @@ Django backend on port 8000 before opening the app.
   `python manage.py runserver 0.0.0.0:8000` and allow the port through the
   computer's firewall.
 - **iOS simulator:** use `http://127.0.0.1:8000/api/v1`.
-- **Web:** web bundling is supported for build checks, but authenticated web
-  runtime is not currently supported because Expo SecureStore is native-only.
+
+For browsers, use the separate responsive app in [../web/README.md](../web/README.md).
+It uses a backend-issued HttpOnly refresh cookie; Expo SecureStore remains the
+native app's token store and is not used for web sign-in.
 
 Restart Expo after changing `.env`. Expo public environment variables are
 bundled into the app; never put secrets in them. `.env` is ignored by Git.
