@@ -104,6 +104,7 @@ def send_message(request, session_id=None):
         intent=advice['intent'],
         confidence=advice['confidence'],
         sources=advice['sources'],
+        metadata=advice.get('metadata', {}),
     )
     
     session.save()  # Update updated_at
