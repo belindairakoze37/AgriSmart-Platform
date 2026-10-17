@@ -1,10 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { ChevronDown, X } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
 import {
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -44,6 +47,7 @@ type Choice = { id: string; name: string };
 
 export default function CreateListingScreen() {
   const queryClient = useQueryClient();
+  const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [commodity, setCommodity] = useState<Choice | null>(null);
   const [district, setDistrict] = useState<Choice | null>(null);
   const [quality, setQuality] = useState<'A' | 'B' | 'C'>('B');
@@ -74,8 +78,8 @@ export default function CreateListingScreen() {
     },
   });
   const createMutation = useMutation({
-    mutationFn: (payload: CreateListingData) =>
-      marketplaceApi.createListing(payload),
+    mutationFn: ({ payload, imageUris }: { payload: CreateListingData; imageUris: string[] }) =>
+      marketplaceApi.createListing(payload, imageUris),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['marketplace', 'listings'] });
       router.replace('/(tabs)/marketplace?view=mine');
@@ -112,6 +116,49 @@ export default function CreateListingScreen() {
     item.name.toLocaleLowerCase().includes(pickerSearch.trim().toLocaleLowerCase()),
   );
 
+  async function addPhotos(source: 'camera' | 'library') {
+    if (photos.length >= 5) {
+      setSubmitError('A listing can include up to five photos.');
+      return;
+    }
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Camera permission needed',
+          'Allow camera access to photograph the produce for your listing.',
+        );
+        return;
+      }
+    } else {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Photo permission needed',
+          'Allow photo access to select produce photos for your listing.',
+        );
+        return;
+      }
+    }
+
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ['images'],
+      allowsEditing: source === 'camera',
+      quality: 0.8,
+      ...(source === 'library'
+        ? { allowsMultipleSelection: true, selectionLimit: 5 - photos.length }
+        : {}),
+    };
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+    if (!result.canceled) {
+      setPhotos((current) => [...current, ...result.assets].slice(0, 5));
+      setSubmitError('');
+    }
+  }
+
   const submit = handleSubmit((values) => {
     if (!commodity || !district) {
       setSubmitError('Choose a commodity and a district before publishing.');
@@ -119,17 +166,20 @@ export default function CreateListingScreen() {
     }
     setSubmitError('');
     createMutation.mutate({
-      commodity: commodity.id,
-      district: district.id,
-      title: values.title.trim(),
-      description: values.description.trim(),
-      quantity_kg: Number(values.quantity_kg),
-      expected_price_per_kg: Number(values.expected_price_per_kg),
-      available_from: values.available_from,
-      quality_grade: quality,
-      ...(values.pickup_location.trim()
-        ? { pickup_location: values.pickup_location.trim() }
-        : {}),
+      payload: {
+        commodity: commodity.id,
+        district: district.id,
+        title: values.title.trim(),
+        description: values.description.trim(),
+        quantity_kg: Number(values.quantity_kg),
+        expected_price_per_kg: Number(values.expected_price_per_kg),
+        available_from: values.available_from,
+        quality_grade: quality,
+        ...(values.pickup_location.trim()
+          ? { pickup_location: values.pickup_location.trim() }
+          : {}),
+      },
+      imageUris: photos.map(({ uri }) => uri),
     });
   });
 
@@ -237,6 +287,41 @@ export default function CreateListingScreen() {
                 </Pressable>
               ))}
             </View>
+          </View>
+
+          <View style={styles.photoSection}>
+            <View style={styles.photoHeading}>
+              <View>
+                <Text style={styles.label}>Produce photos</Text>
+                <Text style={styles.photoHint}>Up to 5 clear photos help buyers.</Text>
+              </View>
+              <Text style={styles.photoCount}>{photos.length}/5</Text>
+            </View>
+            <View style={styles.photoButtons}>
+              <PrimaryButton onPress={() => void addPhotos('camera')} variant="outline">
+                Take photo
+              </PrimaryButton>
+              <PrimaryButton onPress={() => void addPhotos('library')} variant="outline">
+                Choose photos
+              </PrimaryButton>
+            </View>
+            {photos.length ? (
+              <ScrollView horizontal contentContainerStyle={styles.photoList} showsHorizontalScrollIndicator={false}>
+                {photos.map((photo, index) => (
+                  <View key={`${photo.uri}-${index}`} style={styles.photoPreviewWrap}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+                    <Pressable
+                      accessibilityLabel={`Remove photo ${index + 1}`}
+                      accessibilityRole="button"
+                      onPress={() => setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index))}
+                      style={styles.removePhoto}
+                    >
+                      <X color={colors.white} size={14} />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : null}
           </View>
 
           <Controller
@@ -396,6 +481,15 @@ const styles = StyleSheet.create({
   qualityTextSelected: { color: colors.primary },
   error: { color: colors.error, fontSize: 12 },
   note: { color: colors.muted, fontSize: 11, lineHeight: 16, textAlign: 'center' },
+  photoSection: { gap: 10 },
+  photoHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  photoHint: { color: colors.muted, fontSize: 11, marginTop: 4 },
+  photoCount: { color: colors.primary, fontSize: 12, fontWeight: '800' },
+  photoButtons: { flexDirection: 'row', gap: 9 },
+  photoList: { gap: 9, paddingVertical: 3 },
+  photoPreviewWrap: { height: 86, position: 'relative', width: 86 },
+  photoPreview: { backgroundColor: '#F3F4F6', borderRadius: 11, height: '100%', width: '100%' },
+  removePhoto: { alignItems: 'center', backgroundColor: 'rgba(17,24,39,0.72)', borderRadius: 12, height: 24, justifyContent: 'center', position: 'absolute', right: 4, top: 4, width: 24 },
   modalBackdrop: { backgroundColor: 'rgba(17,24,39,0.42)', flex: 1, justifyContent: 'flex-end' },
   modal: { backgroundColor: colors.white, borderTopLeftRadius: 23, borderTopRightRadius: 23, height: '82%', padding: 18 },
   modalHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },

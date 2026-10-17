@@ -85,9 +85,11 @@ Both clients access the same API-managed business records. Browser and mobile
 clients have distinct refresh-token storage, but sign in to the same account.
 Offer submission and seller accept/reject actions are supported. Accepting an
 offer creates a backend transaction record and marks the listing sold; there is
-no payment processing or transaction-management interface. The current
-frontends do not present disease detection, SMS/OTP verification, price alerts,
-or farm/crop management as finished user flows.
+no payment processing or transaction-management interface. The mobile app
+supports disease-photo capture/upload, but the backend will not produce a
+diagnosis until a compatible trained model is installed. SMS/OTP delivery,
+price-alert user flows, push notifications, weather alerts, and mobile
+farm/crop management remain incomplete.
 
 ## Production deployment
 

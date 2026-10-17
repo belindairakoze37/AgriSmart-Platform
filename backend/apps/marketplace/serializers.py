@@ -1,3 +1,7 @@
+from pathlib import PurePosixPath
+from uuid import uuid4
+
+from django.core.files.storage import default_storage
 from rest_framework import serializers
 from .models import Listing, Offer, Transaction
 
@@ -8,6 +12,7 @@ class ListingSerializer(serializers.ModelSerializer):
     commodity_name = serializers.CharField(source='commodity.name', read_only=True)
     district_name = serializers.CharField(source='district.name', read_only=True)
     offers_count = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
     
     class Meta:
         model = Listing
@@ -25,17 +30,60 @@ class ListingSerializer(serializers.ModelSerializer):
     def get_offers_count(self, obj):
         return obj.offers.filter(status='pending').count()
 
+    def get_images(self, obj):
+        request = self.context.get('request')
+        urls = []
+        for image in obj.images:
+            if image.startswith(('http://', 'https://')):
+                urls.append(image)
+                continue
+            url = image if image.startswith('/') else default_storage.url(image)
+            urls.append(request.build_absolute_uri(url) if request else url)
+        return urls
+
 
 class ListingCreateSerializer(serializers.ModelSerializer):
+    image_files = serializers.ListField(
+        child=serializers.ImageField(),
+        required=False,
+        write_only=True,
+    )
+
     class Meta:
         model = Listing
         fields = [
             'commodity', 'title', 'description', 'quantity_kg',
             'quality_grade', 'expected_price_per_kg',
             'available_from', 'available_until',
-            'district', 'latitude', 'longitude',
-            'pickup_location', 'images'
+            'district', 'latitude', 'longitude', 'pickup_location', 'images',
+            'image_files',
         ]
+
+    def validate_image_files(self, images):
+        if len(images) > 5:
+            raise serializers.ValidationError('Upload no more than five photos.')
+        if any(image.size > 10 * 1024 * 1024 for image in images):
+            raise serializers.ValidationError('Each photo must be 10 MB or smaller.')
+        return images
+
+    def create(self, validated_data):
+        image_files = validated_data.pop('image_files', [])
+        listing = super().create(validated_data)
+        image_paths = list(listing.images)
+        for image in image_files:
+            suffix = PurePosixPath(image.name).suffix.lower()
+            if suffix not in {'.jpg', '.jpeg', '.png', '.webp'}:
+                suffix = '.jpg'
+            image_paths.append(
+                default_storage.save(
+                    f'listings/{listing.farmer_id}/{uuid4().hex}{suffix}',
+                    image,
+                )
+            )
+        if image_paths != listing.images:
+            listing.images = image_paths
+            listing.save(update_fields=['images'])
+        return listing
 
 
 class OfferSerializer(serializers.ModelSerializer):

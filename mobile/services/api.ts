@@ -149,6 +149,33 @@ export interface CreateListingData {
   images?: string[];
 }
 
+export interface DiseaseDetection {
+  id: string;
+  image: string;
+  crop_type: string;
+  detected_disease: string;
+  confidence: number | null;
+  all_predictions: Array<{
+    disease: string;
+    name: string;
+    confidence: number;
+    severity?: string;
+  }>;
+  recommendations: {
+    immediate_actions: string[];
+    preventive_measures: string[];
+    severity: string;
+  };
+  is_correct: boolean | null;
+  user_notes: string;
+  created_at: string;
+}
+
+export interface DiseaseDetectionResponse {
+  detection: DiseaseDetection;
+  disclaimer: string;
+}
+
 export interface AdvisorySession {
   id: string;
   title: string;
@@ -349,8 +376,31 @@ export const marketplaceApi = {
       params: { page },
     }),
   getListing: (id: string) => api.get<Listing>(`/marketplace/listings/${id}/`),
-  createListing: (data: CreateListingData) =>
-    api.post<Listing>('/marketplace/listings/', data),
+  createListing: async (data: CreateListingData, photoUris: string[] = []) => {
+    if (photoUris.length === 0) {
+      return api.post<Listing>('/marketplace/listings/', data);
+    }
+
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, typeof value === 'string' ? value : String(value));
+      }
+    });
+    await Promise.all(
+      photoUris.map(async (uri, index) => {
+        const response = await fetch(uri);
+        if (!response.ok) {
+          throw new Error('A selected listing photo could not be read.');
+        }
+        const image = await response.blob();
+        formData.append('image_files', image, `produce-${index + 1}.jpg`);
+      }),
+    );
+    return api.post<Listing>('/marketplace/listings/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   createOffer: (data: {
     listing: string;
     offered_price_per_kg: number;
@@ -358,6 +408,25 @@ export const marketplaceApi = {
     pickup_date?: string;
     message?: string;
   }) => api.post('/marketplace/offers/', data),
+};
+
+export const diseasesApi = {
+  detect: async (uri: string, cropType: string) => {
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error('The selected crop photo could not be read.');
+    }
+    const formData = new FormData();
+    formData.append('image', await response.blob(), 'crop-photo.jpg');
+    formData.append('crop_type', cropType);
+    return (
+      await api.post<DiseaseDetectionResponse>(
+        '/diseases/detect/',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+    ).data;
+  },
 };
 
 export const advisoryApi = {

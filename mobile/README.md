@@ -38,7 +38,10 @@ bundled into the app; never put secrets in them. `.env` is ignored by Git.
 - Dashboard and market browsing with commodity prices and price history.
 - Advisory sessions, message history, and sending messages to the backend.
 - Marketplace browsing/search, seller's own listings, listing creation and
-  details, and submitting buyer offers.
+  details, produce photo uploads, and submitting buyer offers.
+- Disease photo capture/gallery selection and secure multipart upload to the
+  backend. The API reports detection as unavailable until a supported trained
+  model is installed; it does not return fabricated diagnoses.
 
 The mobile client uses the Django API under `/api/v1`, including auth,
 commodities/prices/districts, advisory sessions/messages/chat, and marketplace
@@ -46,8 +49,10 @@ listings/offers. The backend remains the source of truth for fields and
 behavior.
 
 No payment flow is included: submitting an offer does not transfer money.
-Disease-detection screens and SMS/OTP verification are also not presented as
-working mobile features.
+SMS/OTP delivery, disease-model inference, push notifications, weather alerts,
+and farm management are not yet complete mobile features. Disease screening
+requires a trained model artifact and a compatible inference environment on the
+backend before it can provide results.
 
 ## Checks
 

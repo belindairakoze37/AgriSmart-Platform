@@ -10,6 +10,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class DiseaseModelUnavailableError(RuntimeError):
+    message = (
+        'Crop disease detection is not available because a trained model '
+        'has not been installed.'
+    )
+
+
 # Disease classes and recommendations
 DISEASE_INFO = {
     'Tomato___Bacterial_spot': {
@@ -116,7 +123,11 @@ class DiseaseDetectionService:
     def __init__(self):
         self.model = None
         self._load_model()
-    
+
+    @property
+    def is_available(self) -> bool:
+        return self.model is not None
+
     def _load_model(self):
         """Load ML model (lazy loading)"""
         try:
@@ -127,25 +138,14 @@ class DiseaseDetectionService:
                 self.model.eval()
                 logger.info("Disease detection model loaded")
             else:
-                logger.warning(f"Model not found at {model_path}. Using mock predictions.")
+                logger.warning("Disease model not found at %s.", model_path)
         except Exception as e:
             logger.error(f"Failed to load model: {str(e)}")
     
     def detect(self, image_path: str, crop_type: str = '') -> Dict:
-        """
-        Detect disease from image
-        
-        In production, this would:
-        1. Preprocess the image (resize, normalize)
-        2. Run through CNN model
-        3. Return top predictions
-        
-        For now, returns mock predictions.
-        """
-        if self.model:
-            return self._real_detect(image_path, crop_type)
-        else:
-            return self._mock_detect(crop_type)
+        if not self.model:
+            raise DiseaseModelUnavailableError(DiseaseModelUnavailableError.message)
+        return self._real_detect(image_path, crop_type)
     
     def _real_detect(self, image_path: str, crop_type: str) -> Dict:
         """Real ML inference"""
@@ -203,45 +203,3 @@ class DiseaseDetectionService:
             ),
         }
     
-    def _mock_detect(self, crop_type: str) -> Dict:
-        """Mock detection for development"""
-        import random
-        
-        # Select relevant diseases based on crop
-        if 'tomato' in crop_type.lower():
-            options = [
-                'Tomato___Bacterial_spot',
-                'Tomato___Early_blight',
-                'Tomato___Late_blight',
-                'Tomato___healthy',
-            ]
-        elif 'maize' in crop_type.lower():
-            options = [
-                'Maize___Common_rust',
-                'Maize___Northern_Leaf_Blight',
-                'Maize___healthy',
-            ]
-        else:
-            options = list(DISEASE_INFO.keys())
-        
-        # Random prediction
-        detected = random.choice(options)
-        confidence = random.uniform(0.7, 0.95)
-        
-        info = DISEASE_INFO.get(detected, {})
-        
-        return {
-            'detected_disease': detected,
-            'disease_name': info.get('name', detected),
-            'confidence': confidence,
-            'severity': info.get('severity', 'unknown'),
-            'all_predictions': [
-                {'disease': detected, 'name': info.get('name'), 'confidence': confidence}
-            ],
-            'immediate_actions': info.get('immediate', []),
-            'preventive_measures': info.get('preventive', []),
-            'disclaimer': (
-                '⚠️ DEMO MODE: This is a mock prediction. '
-                'Real AI model not loaded. Do not rely on this for actual diagnosis.'
-            ),
-        }

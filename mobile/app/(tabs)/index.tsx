@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import {
   ArrowRight,
+  Camera,
   Leaf,
   MessageCircle,
   ShoppingBasket,
@@ -25,6 +26,7 @@ import { useAuthStore } from '../../store/authStore';
 const quickActions = [
   { label: 'Market prices', Icon: Leaf, route: '/(tabs)/markets', tone: '#E8F5E9' },
   { label: 'Ask an advisor', Icon: MessageCircle, route: '/(tabs)/advisory', tone: '#EAF1FF' },
+  { label: 'Detect disease', Icon: Camera, route: '/diseases/detect', tone: '#FDECEC' },
   { label: 'Find produce', Icon: ShoppingBasket, route: '/(tabs)/marketplace', tone: '#FFF4E5' },
 ] as const;
 

@@ -23,7 +23,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "AgriSmart uses your camera to photograph crops and produce.",
+          "photosPermission": "AgriSmart uses selected photos to analyze crops and create produce listings."
+        }
+      ]
     ]
   }
 }

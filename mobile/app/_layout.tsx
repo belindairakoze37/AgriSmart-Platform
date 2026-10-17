@@ -55,6 +55,7 @@ function RootLayoutNav() {
       <Stack.Screen name="markets/[id]" />
       <Stack.Screen name="marketplace/[id]" />
       <Stack.Screen name="marketplace/create" />
+      <Stack.Screen name="diseases/detect" />
     </Stack>
   );
 }

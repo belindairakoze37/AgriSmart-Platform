@@ -6,7 +6,7 @@ from drf_spectacular.utils import extend_schema
 
 from .models import DiseaseDetection
 from .serializers import DiseaseDetectionCreateSerializer, DiseaseDetectionSerializer
-from .services import DiseaseDetectionService
+from .services import DiseaseDetectionService, DiseaseModelUnavailableError
 
 
 class DetectionListView(generics.ListAPIView):
@@ -33,14 +33,10 @@ class DetectionDetailView(generics.RetrieveUpdateAPIView):
 @parser_classes([MultiPartParser, FormParser])
 def detect_disease(request):
     """Upload image and detect disease"""
-    image = request.FILES.get('image')
+    serializer = DiseaseDetectionCreateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    image = serializer.validated_data['image']
     crop_type = request.data.get('crop_type', '')
-    
-    if not image:
-        return Response(
-            {'error': 'image is required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
     
     # Validate image
     if image.size > 10 * 1024 * 1024:  # 10MB
@@ -49,15 +45,20 @@ def detect_disease(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Create detection record
+    service = DiseaseDetectionService()
+    if not service.is_available:
+        return Response(
+            {'error': DiseaseModelUnavailableError.message},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    # Create detection record after confirming a model is available.
     detection = DiseaseDetection.objects.create(
         user=request.user,
         image=image,
         crop_type=crop_type,
     )
     
-    # Run detection
-    service = DiseaseDetectionService()
     result = service.detect(detection.image.path, crop_type)
     
     # Update record
