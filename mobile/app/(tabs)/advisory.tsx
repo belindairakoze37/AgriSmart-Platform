@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowUp, Leaf, Sprout } from 'lucide-react-native';
+import { ArrowUp, Leaf, Plus, Sprout } from 'lucide-react-native';
 import { FeedbackState } from '../../components/FeedbackState';
 import { LoadingState } from '../../components/LoadingState';
 import { colors } from '../../constants/theme';
@@ -35,6 +35,7 @@ export default function AdvisoryScreen() {
   const queryClient = useQueryClient();
   const listRef = useRef<FlatList<AdvisoryMessage>>(null);
   const [sessionId, setSessionId] = useState<string>();
+  const [newConversation, setNewConversation] = useState(false);
   const [draft, setDraft] = useState('');
   const [sendError, setSendError] = useState<string>();
   const farmProfileQuery = useQuery({
@@ -47,7 +48,9 @@ export default function AdvisoryScreen() {
       toArray((await advisoryApi.getSessions()).data),
   });
 
-  const activeSessionId = sessionId ?? sessionsQuery.data?.[0]?.id;
+  const activeSessionId = newConversation
+    ? undefined
+    : sessionId ?? sessionsQuery.data?.[0]?.id;
 
   const messagesQuery = useQuery({
     queryKey: ['advisory', 'messages', activeSessionId],
@@ -70,6 +73,7 @@ export default function AdvisoryScreen() {
     }) => advisoryApi.sendMessage(content, currentSessionId, context),
     onSuccess: ({ data }) => {
       setSessionId(data.session_id);
+      setNewConversation(false);
       setSendError(undefined);
       queryClient.setQueryData<AdvisoryMessage[]>(
         ['advisory', 'messages', data.session_id],
@@ -108,6 +112,13 @@ export default function AdvisoryScreen() {
     });
   };
 
+  const startNewConversation = () => {
+    setSessionId(undefined);
+    setNewConversation(true);
+    setDraft('');
+    setSendError(undefined);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-[#F5F9F4]" edges={['top']}>
       <View style={styles.header}>
@@ -118,6 +129,14 @@ export default function AdvisoryScreen() {
           <Text style={styles.title}>Ask AI</Text>
           <Text style={styles.subtitle}>Agricultural guidance for your farm</Text>
         </View>
+        <Pressable
+          accessibilityLabel="Start a new conversation"
+          accessibilityRole="button"
+          onPress={startNewConversation}
+          style={styles.newConversationButton}
+        >
+          <Plus color={colors.primary} size={20} />
+        </Pressable>
         <View style={styles.online}>
           <View style={styles.onlineDot} />
           <Text style={styles.onlineText}>Advisor</Text>
@@ -137,7 +156,11 @@ export default function AdvisoryScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 key={session.id}
-                onPress={() => setSessionId(session.id)}
+                onPress={() => {
+                  setNewConversation(false);
+                  setSessionId(session.id);
+                  setSendError(undefined);
+                }}
                 style={[styles.sessionChip, selected && styles.selectedSessionChip]}
               >
                 <Text
@@ -316,6 +339,7 @@ const styles = StyleSheet.create({
   selectedSessionText: { color: colors.darkGreen, fontWeight: '800' },
   headerIcon: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: 13, height: 42, justifyContent: 'center', width: 42 },
   headerCopy: { flex: 1 },
+  newConversationButton: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 18, height: 36, justifyContent: 'center', width: 36 },
   title: { color: colors.darkGreen, fontSize: 17, fontWeight: '800' },
   subtitle: { color: colors.muted, fontSize: 11, marginTop: 3 },
   online: { alignItems: 'center', flexDirection: 'row', gap: 5 },

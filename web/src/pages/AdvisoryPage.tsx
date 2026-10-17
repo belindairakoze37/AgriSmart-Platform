@@ -1,8 +1,8 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUp, MessageCircle, Plus, Sprout } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
-import { advisoryApi, getApiErrorMessage } from '../api/client';
+import { advisoryApi, farmApi, getApiErrorMessage } from '../api/client';
 import type { AdvisoryMessage, AdvisorySession } from '../api/types';
 import { getNextPage } from '../api/pagination';
 import { ErrorState, LoadingState, PageHeader } from '../components/Feedback';
@@ -17,6 +17,10 @@ export function AdvisoryPage() {
   const [sendError, setSendError] = useState('');
   const queryClient = useQueryClient();
   const messagesEnd = useRef<HTMLDivElement>(null);
+  const farmProfileQuery = useQuery({
+    queryKey: ['farmer-profile'],
+    queryFn: farmApi.getProfile,
+  });
   const sessionsQuery = useInfiniteQuery({
     queryKey: ['advisory', 'sessions'],
     initialPageParam: 1,
@@ -54,7 +58,14 @@ export function AdvisoryPage() {
   );
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
-      advisoryApi.sendMessage(content, activeSessionId),
+      advisoryApi.sendMessage(content, activeSessionId, {
+        ...(farmProfileQuery.data?.primary_crops.length
+          ? { crop_type: farmProfileQuery.data.primary_crops.join(', ') }
+          : {}),
+        ...(farmProfileQuery.data?.district
+          ? { location: farmProfileQuery.data.district }
+          : {}),
+      }),
     onSuccess: async (response) => {
       setSelectedSessionId(response.session_id);
       setNewConversation(false);

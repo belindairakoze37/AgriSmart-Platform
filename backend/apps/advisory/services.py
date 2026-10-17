@@ -3,6 +3,7 @@ Smart Agricultural Advisor
 Uses rule-based + LLM hybrid approach for reliability
 """
 import os
+import re
 from typing import Dict, List, Optional
 from django.conf import settings
 from openai import OpenAI
@@ -127,6 +128,12 @@ KNOWLEDGE_BASE = {
     },
 }
 
+CROP_ALIASES = {
+    'maize': ('maize', 'corn'),
+    'beans': ('bean', 'beans'),
+    'tomatoes': ('tomato', 'tomatoes'),
+}
+
 
 class AdvisoryService:
     """Hybrid advisory service: rule-based + LLM"""
@@ -163,6 +170,24 @@ class AdvisoryService:
         if crop in KNOWLEDGE_BASE and intent in KNOWLEDGE_BASE[crop]:
             return KNOWLEDGE_BASE[crop][intent]
         return None
+
+    def resolve_crop(self, crop: str, message: str) -> str:
+        """Choose a supported crop from the question or farmer profile context."""
+        question = message.casefold()
+        for supported_crop, aliases in CROP_ALIASES.items():
+            if any(
+                re.search(rf'\b{re.escape(alias)}\b', question)
+                for alias in aliases
+            ):
+                return supported_crop
+
+        context = crop.casefold()
+        for raw_crop in re.split(r'[,;/]', context):
+            normalized_crop = raw_crop.strip()
+            for supported_crop, aliases in CROP_ALIASES.items():
+                if normalized_crop == supported_crop or normalized_crop in aliases:
+                    return supported_crop
+        return crop.strip().lower()
     
     def get_advice(
         self,
@@ -177,10 +202,19 @@ class AdvisoryService:
         Returns dict with content, intent, sources, confidence
         """
         intent = self.classify_intent(message)
-        knowledge = self.get_knowledge(crop, intent) if crop else None
+        resolved_crop = self.resolve_crop(crop, message)
+        knowledge = self.get_knowledge(resolved_crop, intent) if resolved_crop else None
         
         # Build prompt
-        prompt = self._build_prompt(message, crop, location, language, intent, knowledge, context)
+        prompt = self._build_prompt(
+            message,
+            resolved_crop,
+            location,
+            language,
+            intent,
+            knowledge,
+            context,
+        )
         
         # Try LLM first if available
         if self.client:
@@ -206,7 +240,7 @@ class AdvisoryService:
                 logger.error(f"LLM error: {str(e)}")
         
         # Fallback to rule-based
-        return self._rule_based_response(intent, crop, knowledge, language)
+        return self._rule_based_response(intent, resolved_crop, knowledge, language)
     
     def _get_system_prompt(self, language: str) -> str:
         return f"""You are an expert agricultural extension officer in Uganda.

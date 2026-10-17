@@ -167,6 +167,11 @@ export interface SendMessageResponse {
   ai_message: AdvisoryMessage;
 }
 
+export interface AdvisoryFarmContext {
+  district: string;
+  primary_crops: string[];
+}
+
 export interface OfficerFarmer {
   id: string;
   user_id: string;

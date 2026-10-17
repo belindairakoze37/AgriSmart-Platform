@@ -4,6 +4,7 @@ import axios, {
 } from 'axios';
 import type {
   AdvisoryMessage,
+  AdvisoryFarmContext,
   AdvisorySession,
   AdvisoryDeliveryResult,
   AdminCommodity,
@@ -309,13 +310,20 @@ export const advisoryApi = {
   async sendMessage(
     content: string,
     sessionId?: string,
+    context?: { crop_type?: string; location?: string },
   ): Promise<SendMessageResponse> {
     const path = sessionId
       ? `/advisory/chat/${sessionId}/`
       : '/advisory/chat/';
     return (
-      await api.post<SendMessageResponse>(path, { content })
+      await api.post<SendMessageResponse>(path, { content, ...context })
     ).data;
+  },
+};
+
+export const farmApi = {
+  async getProfile(): Promise<AdvisoryFarmContext> {
+    return (await api.get<AdvisoryFarmContext>('/farmers/profile/')).data;
   },
 };
 
