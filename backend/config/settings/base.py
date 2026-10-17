@@ -161,3 +161,4 @@ SPECTACULAR_SETTINGS = {
 
 OPENWEATHER_API_KEY = config('OPENWEATHER_API_KEY', default='')
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-4o-mini')
