@@ -4,6 +4,14 @@ from django.db import models
 from django.core.validators import RegexValidator
 
 
+def default_notification_preferences():
+    return {
+        'price_alerts': True,
+        'weather_alerts': True,
+        'marketplace_offers': True,
+    }
+
+
 class User(AbstractUser):
     """Custom user model with phone-based authentication"""
     
@@ -28,6 +36,10 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.FARMER)
     is_phone_verified = models.BooleanField(default=False)
     preferred_language = models.CharField(max_length=10, default='en')
+    notification_preferences = models.JSONField(
+        default=default_notification_preferences,
+        blank=True,
+    )
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
     
     USERNAME_FIELD = 'phone_number'

@@ -28,6 +28,11 @@ export interface AuthUser {
   full_name: string;
   role: string;
   preferred_language: string;
+  notification_preferences: {
+    price_alerts: boolean;
+    weather_alerts: boolean;
+    marketplace_offers: boolean;
+  };
   profile_picture: string | null;
   is_phone_verified: boolean;
   date_joined: string;
@@ -453,6 +458,10 @@ export const authApi = {
       password,
     }),
   getProfile: () => api.get<AuthUser>('/auth/profile/'),
+  updateProfile: (data: {
+    preferred_language?: 'en' | 'lg' | 'sw';
+    notification_preferences?: AuthUser['notification_preferences'];
+  }) => api.patch<AuthUser>('/auth/profile/', data),
 };
 
 export const marketsApi = {

@@ -12,10 +12,40 @@ from rest_framework.response import Response
 
 from apps.accounts.models import FarmerProfile
 from apps.markets.models import District
+from apps.notifications.models import Notification
+from apps.notifications.services import create_user_notification
 
 logger = logging.getLogger(__name__)
 OPENWEATHER_FORECAST_URL = 'https://api.openweathermap.org/data/2.5/forecast'
 HEAVY_RAIN_THRESHOLD_MM = 10
+
+
+def create_weather_alert(user, data):
+    if not data['heavy_rain_warning']:
+        return
+    today = timezone.localdate()
+    if Notification.objects.filter(
+        user=user,
+        notification_type=Notification.NotificationType.ADVISORY,
+        title='Heavy rain forecast',
+        created_at__date=today,
+    ).exists():
+        return
+    create_user_notification(
+        user=user,
+        title='Heavy rain forecast',
+        message=(
+            f"Heavy rain is forecast for {data['district']}. "
+            'Avoid spraying pesticides before the rain.'
+        ),
+        notification_type=Notification.NotificationType.ADVISORY,
+        action_url='/',
+        metadata={
+            'district': data['district'],
+            'rainfall_next_24h_mm': data['rainfall_next_24h_mm'],
+            'date': today.isoformat(),
+        },
+    )
 
 
 @api_view(['GET'])
@@ -56,6 +86,7 @@ def current_weather(request):
     cache_key = f'agrismart-weather:{float(latitude):.3f}:{float(longitude):.3f}'
     cached = cache.get(cache_key)
     if cached:
+        create_weather_alert(request.user, cached)
         return Response(cached)
 
     try:
@@ -151,4 +182,5 @@ def current_weather(request):
         'updated_at': now.isoformat(),
     }
     cache.set(cache_key, data, timeout=600)
+    create_weather_alert(request.user, data)
     return Response(data)

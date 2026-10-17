@@ -60,3 +60,62 @@ class AuthAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['phone_number'], '+256700000001')
+        self.assertEqual(
+            response.data['notification_preferences'],
+            {
+                'price_alerts': True,
+                'weather_alerts': True,
+                'marketplace_offers': True,
+            },
+        )
+
+    def test_profile_updates_notification_preferences(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse('profile'),
+            {'notification_preferences': {'price_alerts': False}},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(
+            self.user.notification_preferences,
+            {
+                'price_alerts': False,
+                'weather_alerts': True,
+                'marketplace_offers': True,
+            },
+        )
+
+    def test_profile_rejects_unknown_or_non_boolean_preferences(self):
+        self.client.force_authenticate(user=self.user)
+
+        for preferences in (
+            {'unknown': True},
+            {'weather_alerts': 'off'},
+        ):
+            with self.subTest(preferences=preferences):
+                response = self.client.patch(
+                    reverse('profile'),
+                    {'notification_preferences': preferences},
+                    format='json',
+                )
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_400_BAD_REQUEST,
+                )
+
+    def test_profile_updates_only_supported_language_codes(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse('profile'),
+            {'preferred_language': 'lg'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.preferred_language, 'lg')

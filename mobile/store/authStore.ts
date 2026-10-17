@@ -15,6 +15,7 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   authError: string | null;
+  updateUser: (user: AuthUser) => void;
   login: (phone: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   isAuthenticated: false,
   authError: null,
+  updateUser: (user) => set({ user }),
 
   login: async (phone, password) => {
     set({ isLoading: true, authError: null });

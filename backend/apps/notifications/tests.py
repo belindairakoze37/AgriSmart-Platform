@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import Notification
+from .services import create_user_notification
 
 User = get_user_model()
 
@@ -68,3 +69,19 @@ class NotificationAPITests(APITestCase):
 
         other_notification = Notification.objects.get(user=self.other_user)
         self.assertFalse(other_notification.is_read)
+
+    def test_notification_service_honors_marketplace_preference(self):
+        self.user.notification_preferences = {'marketplace_offers': False}
+        self.user.save(update_fields=['notification_preferences'])
+
+        result = create_user_notification(
+            user=self.user,
+            title='New offer',
+            message='A buyer made an offer.',
+            notification_type=Notification.NotificationType.MARKETPLACE,
+        )
+
+        self.assertIsNone(result)
+        self.assertFalse(
+            Notification.objects.filter(user=self.user, title='New offer').exists()
+        )

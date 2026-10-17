@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from apps.notifications.models import Notification
+from apps.notifications.services import create_user_notification
 from .models import MarketPrice, PriceAlert
 
 
@@ -32,7 +33,7 @@ def trigger_price_alerts(sender, instance, **kwargs):
             alert.triggered_at = timezone.now()
             alert.is_active = False
             alert.save(update_fields=['triggered_at', 'is_active'])
-            Notification.objects.create(
+            create_user_notification(
                 user=alert.user,
                 title=f'{instance.commodity.name} price alert',
                 message=(

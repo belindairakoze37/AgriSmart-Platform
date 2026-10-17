@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import FarmerProfile
 from apps.markets.models import District
+from apps.notifications.models import Notification
 
 User = get_user_model()
 
@@ -67,6 +68,42 @@ class FarmerWeatherTests(TestCase):
             get_weather.call_args.kwargs['params']['appid'],
             'test-weather-key',
         )
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.user,
+                notification_type=Notification.NotificationType.ADVISORY,
+            ).count(),
+            1,
+        )
+        self.client.get(reverse('farmer-weather'))
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.user,
+                notification_type=Notification.NotificationType.ADVISORY,
+            ).count(),
+            1,
+        )
+
+    @override_settings(OPENWEATHER_API_KEY='test-weather-key')
+    @patch('apps.core.weather.requests.get')
+    def test_weather_alert_respects_disabled_preference(self, get_weather):
+        self.user.notification_preferences = {'weather_alerts': False}
+        self.user.save(update_fields=['notification_preferences'])
+        start = int(timezone.now().timestamp())
+        get_weather.return_value = Mock(
+            json=Mock(return_value={
+                'city': {'name': 'Gulu'},
+                'list': [
+                    {'dt': start + 3600, 'main': {'temp': 25}, 'rain': {'3h': 11}},
+                ],
+            })
+        )
+
+        result = self.client.get(reverse('farmer-weather'))
+
+        self.assertEqual(result.status_code, status.HTTP_200_OK)
+        self.assertTrue(result.data['heavy_rain_warning'])
+        self.assertFalse(Notification.objects.filter(user=self.user).exists())
 
     @override_settings(OPENWEATHER_API_KEY='')
     @patch('apps.core.weather.requests.get')

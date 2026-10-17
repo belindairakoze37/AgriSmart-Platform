@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from apps.accounts.models import FarmerProfile
 from apps.notifications.models import Notification
+from apps.notifications.services import create_user_notification
 from .models import Listing, Offer, Transaction
 from .serializers import (
     ListingSerializer, ListingCreateSerializer,
@@ -136,7 +137,7 @@ class OfferListCreateView(generics.ListCreateAPIView):
             )
         
         offer = serializer.save(buyer=self.request.user, status=Offer.Status.PENDING)
-        Notification.objects.create(
+        create_user_notification(
             user=listing.farmer.user,
             title='New offer on your listing',
             message=(
@@ -203,7 +204,7 @@ class OfferDetailView(generics.RetrieveUpdateAPIView):
                 ).exclude(pk=offer.pk).update(status=Offer.Status.REJECTED)
 
             response = super().update(request, *args, **kwargs)
-            Notification.objects.create(
+            create_user_notification(
                 user=offer.buyer,
                 title=(
                     'Your offer was accepted'

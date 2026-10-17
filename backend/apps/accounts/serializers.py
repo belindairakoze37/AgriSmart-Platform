@@ -8,18 +8,43 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    preferred_language = serializers.ChoiceField(
+        choices=[('en', 'English'), ('lg', 'Luganda'), ('sw', 'Swahili')],
+        required=False,
+    )
+    notification_preferences = serializers.JSONField(required=False)
     
     class Meta:
         model = User
         fields = [
             'id', 'phone_number', 'email', 'first_name', 'last_name',
             'full_name', 'role', 'preferred_language', 'profile_picture',
-            'is_phone_verified', 'date_joined'
+            'is_phone_verified', 'date_joined', 'notification_preferences'
         ]
         read_only_fields = ['id', 'date_joined', 'is_phone_verified']
     
     def get_full_name(self, obj):
         return obj.get_full_name()
+
+    def validate_notification_preferences(self, value):
+        allowed_preferences = {
+            'price_alerts',
+            'weather_alerts',
+            'marketplace_offers',
+        }
+        if not isinstance(value, dict) or any(
+            key not in allowed_preferences or not isinstance(enabled, bool)
+            for key, enabled in value.items()
+        ):
+            raise serializers.ValidationError(
+                'Use boolean values for supported notification preferences.'
+            )
+        existing = (
+            self.instance.notification_preferences
+            if self.instance is not None
+            else {}
+        )
+        return {**existing, **value}
 
 
 class RegisterSerializer(serializers.ModelSerializer):

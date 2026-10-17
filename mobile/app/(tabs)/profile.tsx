@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
 import { ArrowRight, LogOut, MapPin, Phone, Sprout, UserRound } from 'lucide-react-native';
 import { FeedbackState } from '../../components/FeedbackState';
@@ -8,7 +8,8 @@ import { LoadingState } from '../../components/LoadingState';
 import { Screen } from '../../components/Screen';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { colors } from '../../constants/theme';
-import { farmApi, getApiErrorMessage } from '../../services/api';
+import { authApi, farmApi, getApiErrorMessage } from '../../services/api';
+import type { AuthUser } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
 export default function ProfileScreen() {
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const authError = useAuthStore((state) => state.authError);
   const logout = useAuthStore((state) => state.logout);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const farmerProfileQuery = useQuery({
     queryKey: ['farmer-profile'],
@@ -39,6 +41,13 @@ export default function ProfileScreen() {
       ]);
       Alert.alert('Location saved', 'Weather information will use this district when map coordinates are available.');
     },
+  });
+  const preferencesMutation = useMutation({
+    mutationFn: (preferences: AuthUser['notification_preferences']) =>
+      authApi.updateProfile({ notification_preferences: preferences }),
+    onSuccess: (response) => updateUser(response.data),
+    onError: (error: unknown) =>
+      Alert.alert('Could not save preferences', getApiErrorMessage(error)),
   });
 
   const confirmLogout = () => {
@@ -169,6 +178,46 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.preferencesCard}>
+        <Text style={styles.preferencesTitle}>Notification preferences</Text>
+        <Text style={styles.preferencesHelp}>
+          Choose which in-app alerts you receive. Changes are saved to your account.
+        </Text>
+        <PreferenceSwitch
+          disabled={preferencesMutation.isPending}
+          label="Market price alerts"
+          onValueChange={(enabled) =>
+            preferencesMutation.mutate({
+              ...user.notification_preferences,
+              price_alerts: enabled,
+            })
+          }
+          value={user.notification_preferences.price_alerts}
+        />
+        <PreferenceSwitch
+          disabled={preferencesMutation.isPending}
+          label="Weather alerts"
+          onValueChange={(enabled) =>
+            preferencesMutation.mutate({
+              ...user.notification_preferences,
+              weather_alerts: enabled,
+            })
+          }
+          value={user.notification_preferences.weather_alerts}
+        />
+        <PreferenceSwitch
+          disabled={preferencesMutation.isPending}
+          label="Marketplace offers"
+          onValueChange={(enabled) =>
+            preferencesMutation.mutate({
+              ...user.notification_preferences,
+              marketplace_offers: enabled,
+            })
+          }
+          value={user.notification_preferences.marketplace_offers}
+        />
+      </View>
+
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push('/farms')}
@@ -192,6 +241,32 @@ export default function ProfileScreen() {
       </Pressable>
       <Text style={styles.version}>AgriSmart · Your farming companion</Text>
     </Screen>
+  );
+}
+
+function PreferenceSwitch({
+  disabled,
+  label,
+  onValueChange,
+  value,
+}: {
+  disabled: boolean;
+  label: string;
+  onValueChange: (value: boolean) => void;
+  value: boolean;
+}) {
+  return (
+    <View style={styles.preferenceRow}>
+      <Text style={styles.preferenceLabel}>{label}</Text>
+      <Switch
+        accessibilityLabel={label}
+        disabled={disabled}
+        onValueChange={onValueChange}
+        thumbColor={value ? colors.primary : '#F4F3F4'}
+        trackColor={{ false: colors.border, true: colors.paleGreen }}
+        value={value}
+      />
+    </View>
   );
 }
 
@@ -272,6 +347,11 @@ const styles = StyleSheet.create({
   locationError: { color: colors.error, fontSize: 11, lineHeight: 16 },
   saveLocation: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 10, justifyContent: 'center', minHeight: 40 },
   saveLocationText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
+  preferencesCard: { backgroundColor: colors.white, borderRadius: 16, marginTop: 14, paddingHorizontal: 15, paddingVertical: 14 },
+  preferencesTitle: { color: colors.darkGreen, fontSize: 14, fontWeight: '800' },
+  preferencesHelp: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 5 },
+  preferenceRow: { alignItems: 'center', borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 50 },
+  preferenceLabel: { color: colors.text, flex: 1, fontSize: 12, fontWeight: '600' },
   disabled: { opacity: 0.5 },
   farmLink: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 15, flexDirection: 'row', gap: 11, marginTop: 14, minHeight: 66, paddingHorizontal: 13 },
   farmLinkIcon: { alignItems: 'center', backgroundColor: colors.paleGreen, borderRadius: 11, height: 36, justifyContent: 'center', width: 36 },
