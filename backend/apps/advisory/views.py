@@ -73,6 +73,12 @@ def send_message(request, session_id=None):
             crop_type=data.get('crop_type', ''),
             location=data.get('location', ''),
         )
+
+    if not session.messages.exists():
+        session.title = data['content'][:50]
+        session.crop_type = data.get('crop_type') or session.crop_type
+        session.location = data.get('location') or session.location
+        session.save(update_fields=['title', 'crop_type', 'location', 'updated_at'])
     
     # Save user message
     user_message = AdvisoryMessage.objects.create(

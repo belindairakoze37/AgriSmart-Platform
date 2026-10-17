@@ -74,6 +74,31 @@ class AdvisoryChatAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(AdvisorySession.objects.count(), 0)
 
+    def test_create_session_then_send_first_message_sets_session_title(self):
+        created = self.client.post(
+            reverse('session-list'),
+            {
+                'title': 'New conversation',
+                'crop_type': 'Maize, Beans',
+                'location': 'Gulu',
+            },
+            format='json',
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.post(
+            reverse('chat-continue', kwargs={'session_id': created.data['id']}),
+            {'content': 'How do I prevent fall armyworm?'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        session = AdvisorySession.objects.get(id=created.data['id'])
+        self.assertEqual(session.title, 'How do I prevent fall armyworm?')
+        self.assertEqual(session.crop_type, 'Maize, Beans')
+        self.assertEqual(session.location, 'Gulu')
+        self.assertEqual(session.messages.count(), 2)
+
     def test_session_messages_are_private_to_the_owner(self):
         other_user = get_user_model().objects.create_user(
             username='+256700000010',

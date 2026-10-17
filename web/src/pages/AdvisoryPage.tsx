@@ -12,7 +12,6 @@ export function AdvisoryPage() {
   const location = useLocation();
   const initialSession = (location.state as { sessionId?: string } | null)?.sessionId;
   const [selectedSessionId, setSelectedSessionId] = useState<string | undefined>(initialSession);
-  const [newConversation, setNewConversation] = useState(false);
   const [draft, setDraft] = useState('');
   const [sendError, setSendError] = useState('');
   const queryClient = useQueryClient();
@@ -31,9 +30,7 @@ export function AdvisoryPage() {
     () => sessionsQuery.data?.pages.flatMap((page) => page.results) ?? [],
     [sessionsQuery.data],
   );
-  const activeSessionId = newConversation
-    ? undefined
-    : selectedSessionId ?? sessions[0]?.id;
+  const activeSessionId = selectedSessionId ?? sessions[0]?.id;
   const activeSession = sessions.find((session) => session.id === activeSessionId);
   const lastMessagePage = Math.max(
     1,
@@ -56,6 +53,28 @@ export function AdvisoryPage() {
     () => messagesQuery.data?.pages.flatMap((page) => page.results) ?? [],
     [messagesQuery.data],
   );
+  const createSessionMutation = useMutation({
+    mutationFn: () =>
+      advisoryApi.createSession({
+        ...(farmProfileQuery.data?.primary_crops.length
+          ? { crop_type: farmProfileQuery.data.primary_crops.join(', ') }
+          : {}),
+        ...(farmProfileQuery.data?.district
+          ? { location: farmProfileQuery.data.district }
+          : {}),
+      }),
+    onSuccess: async (session) => {
+      setSelectedSessionId(session.id);
+      setDraft('');
+      setSendError('');
+      queryClient.setQueryData(['advisory', 'messages', session.id], {
+        pages: [{ count: 0, next: null, previous: null, results: [] }],
+        pageParams: [1],
+      });
+      await queryClient.invalidateQueries({ queryKey: ['advisory', 'sessions'] });
+    },
+    onError: (error: unknown) => setSendError(getApiErrorMessage(error)),
+  });
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
       advisoryApi.sendMessage(content, activeSessionId, {
@@ -68,7 +87,6 @@ export function AdvisoryPage() {
       }),
     onSuccess: async (response) => {
       setSelectedSessionId(response.session_id);
-      setNewConversation(false);
       setDraft('');
       setSendError('');
       await Promise.all([
@@ -83,10 +101,9 @@ export function AdvisoryPage() {
   }, [messages.length, sendMutation.isPending]);
 
   function startNewConversation() {
-    setNewConversation(true);
-    setSelectedSessionId(undefined);
-    setDraft('');
+    if (createSessionMutation.isPending) return;
     setSendError('');
+    createSessionMutation.mutate();
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -101,7 +118,7 @@ export function AdvisoryPage() {
 
   return (
     <>
-      <PageHeader eyebrow="AGRICULTURAL GUIDANCE" title="Ask an advisor" description="Ask questions about crop care, planting, pests, diseases, or harvesting." action={<button className="button button-primary" onClick={startNewConversation} type="button"><Plus size={17} aria-hidden="true" /> New conversation</button>} />
+      <PageHeader eyebrow="AGRICULTURAL GUIDANCE" title="Ask an advisor" description="Ask questions about crop care, planting, pests, diseases, or harvesting." action={<button className="button button-primary" disabled={createSessionMutation.isPending} onClick={startNewConversation} type="button"><Plus size={17} aria-hidden="true" /> {createSessionMutation.isPending ? 'Creating…' : 'New conversation'}</button>} />
       {requestError ? <ErrorState error={requestError} onRetry={() => void sessionsQuery.refetch()} title="Conversation history unavailable" /> : null}
       <div className="advisory-layout">
         <aside className="history-panel" aria-label="Advisory conversation history">
@@ -110,11 +127,11 @@ export function AdvisoryPage() {
             <p className="history-empty">Your saved conversations will appear here.</p>
           ) : (
             <div className="session-list">
-              {sessions.map((session) => <SessionButton active={session.id === activeSessionId} key={session.id} onClick={() => { setNewConversation(false); setSelectedSessionId(session.id); }} session={session} />)}
+              {sessions.map((session) => <SessionButton active={session.id === activeSessionId} key={session.id} onClick={() => { setSelectedSessionId(session.id); }} session={session} />)}
             </div>
           )}
           {sessionsQuery.hasNextPage ? <button className="history-more" disabled={sessionsQuery.isFetchingNextPage} onClick={() => void sessionsQuery.fetchNextPage()} type="button">{sessionsQuery.isFetchingNextPage ? 'Loading…' : 'Load older conversations'}</button> : null}
-          <button className="history-new" onClick={startNewConversation} type="button"><Plus size={16} /> Start a new question</button>
+          <button className="history-new" disabled={createSessionMutation.isPending} onClick={startNewConversation} type="button"><Plus size={16} /> {createSessionMutation.isPending ? 'Creating…' : 'Start a new question'}</button>
         </aside>
         <section className="chat-panel" aria-label="Agricultural advisor chat">
           <div className="chat-header">

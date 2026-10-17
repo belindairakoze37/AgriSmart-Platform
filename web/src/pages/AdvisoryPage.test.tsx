@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AdvisoryPage } from './AdvisoryPage';
 
 const apiMocks = vi.hoisted(() => ({
+  createSession: vi.fn(),
   getProfile: vi.fn(),
   getSessions: vi.fn(),
   getMessages: vi.fn(),
@@ -13,6 +14,7 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock('../api/client', () => ({
   advisoryApi: {
+    createSession: apiMocks.createSession,
     getSessions: apiMocks.getSessions,
     getMessages: apiMocks.getMessages,
     sendMessage: apiMocks.sendMessage,
@@ -55,6 +57,18 @@ describe('agricultural advisor', () => {
       previous: null,
       results: [],
     });
+    apiMocks.createSession.mockResolvedValue({
+      id: 'session-1',
+      title: 'New conversation',
+      crop_type: 'Maize, Beans',
+      location: 'Gulu',
+      language: 'en',
+      is_active: true,
+      last_message: null,
+      message_count: 0,
+      created_at: '2026-10-17T12:00:00Z',
+      updated_at: '2026-10-17T12:00:00Z',
+    });
     apiMocks.sendMessage.mockResolvedValue({
       session_id: 'session-1',
       user_message: {
@@ -80,9 +94,40 @@ describe('agricultural advisor', () => {
     });
   });
 
-  it('sends farm context with a question and starts a saved conversation', async () => {
+  it('creates a saved conversation before sending its first question', async () => {
+    const createdSession = {
+      id: 'session-1',
+      title: 'New conversation',
+      crop_type: 'Maize, Beans',
+      location: 'Gulu',
+      language: 'en',
+      is_active: true,
+      last_message: null,
+      message_count: 0,
+      created_at: '2026-10-17T12:00:00Z',
+      updated_at: '2026-10-17T12:00:00Z',
+    };
+    apiMocks.getSessions
+      .mockResolvedValueOnce({
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+      })
+      .mockResolvedValue({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [createdSession],
+      });
+    apiMocks.createSession.mockResolvedValue(createdSession);
+
     renderAdvisor();
     fireEvent.click(await screen.findByRole('button', { name: /new conversation/i }));
+
+    await waitFor(() => expect(apiMocks.createSession).toHaveBeenCalledOnce());
+    expect(screen.getByText('New conversation', { selector: '.session-copy strong' })).toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText('Message the agricultural advisor'), {
       target: { value: 'When should I plant maize?' },
     });
@@ -91,7 +136,7 @@ describe('agricultural advisor', () => {
     await waitFor(() =>
       expect(apiMocks.sendMessage).toHaveBeenCalledWith(
         'When should I plant maize?',
-        undefined,
+        'session-1',
         { crop_type: 'Maize, Beans', location: 'Gulu' },
       ),
     );

@@ -289,6 +289,18 @@ export const marketplaceApi = {
 };
 
 export const advisoryApi = {
+  async createSession(context?: {
+    title?: string;
+    crop_type?: string;
+    location?: string;
+  }): Promise<AdvisorySession> {
+    return (
+      await api.post<AdvisorySession>('/advisory/sessions/', {
+        title: 'New conversation',
+        ...context,
+      })
+    ).data;
+  },
   async getSessions(page = 1): Promise<Paginated<AdvisorySession>> {
     return (
       await api.get<Paginated<AdvisorySession>>('/advisory/sessions/', {
