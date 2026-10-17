@@ -108,6 +108,17 @@ The command is safe to rerun. It creates six listings labeled as samples in the
 browser and mobile marketplace; demo seller accounts are inactive, and sample
 listings do not accept offers. Do not run this command in production.
 
+## AI agricultural advisor
+
+The advisor calls OpenAI's Chat Completions API using `gpt-4o-mini` by default.
+Install backend dependencies and set `OPENAI_API_KEY` in `backend/.env` (or in
+the backend process environment); never put the key in the browser or mobile
+app. `OPENAI_MODEL` can override the default model. Restart Django after
+changing the environment. Without a key, the advisor still returns limited
+local crop guidance and labels it as offline; provider errors also fall back to
+local guidance and are logged. AI availability requires a valid key, API
+access, and network access from the backend.
+
 The live service still has external prerequisites and incomplete integrations:
 weather requires a valid OpenWeatherMap key and district coordinates; SMS/OTP
 delivery and feature-phone offer replies are not connected; MTN/Airtel payments,
