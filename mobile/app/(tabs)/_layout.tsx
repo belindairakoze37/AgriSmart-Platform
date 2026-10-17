@@ -1,18 +1,26 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import {
+  Home,
+  Leaf,
+  MessageCircle,
+  ShoppingBasket,
+  UserRound,
+} from 'lucide-react-native';
+import { colors } from '../../constants/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2E7D32',
-        tabBarInactiveTintColor: '#999',
         headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: '#8B928C',
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginBottom: 4 },
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#E0E0E0',
-          paddingBottom: 4,
-          height: 60,
+          backgroundColor: colors.white,
+          borderTopColor: colors.border,
+          height: 66,
+          paddingTop: 8,
         },
       }}
     >
@@ -20,35 +28,41 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🏠</Text>,
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="markets"
         options={{
           title: 'Markets',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>📊</Text>,
+          tabBarIcon: ({ color, size }) => <Leaf color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="advisory"
         options={{
           title: 'Ask AI',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>💬</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <MessageCircle color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="marketplace"
         options={{
           title: 'Marketplace',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>🛒</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <ShoppingBasket color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22, color }}>👤</Text>,
+          tabBarIcon: ({ color, size }) => (
+            <UserRound color={color} size={size} />
+          ),
         }}
       />
     </Tabs>

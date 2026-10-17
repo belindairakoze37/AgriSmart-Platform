@@ -6,21 +6,17 @@ import axios, {
 import * as SecureStore from 'expo-secure-store';
 
 const API_URL = (
-  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+  process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api/v1'
 ).replace(/\/+$/, '');
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const REFRESH_URL = '/auth/token/refresh/';
+const REQUEST_TIMEOUT_MS = 15_000;
 
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
     _retry?: boolean;
   }
-}
-
-interface RefreshResponse {
-  access: string;
-  refresh?: string;
 }
 
 export interface AuthUser {
@@ -55,11 +51,165 @@ export interface RegisterData {
   role?: string;
 }
 
+export interface Commodity {
+  id: string;
+  name: string;
+  local_names: Record<string, string>;
+  category: string;
+  unit: string;
+  image: string | null;
+}
+
+export interface District {
+  id: string;
+  name: string;
+  region: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface CurrentPrice {
+  market_id: string;
+  market_name: string;
+  district: string;
+  latitude: number | null;
+  longitude: number | null;
+  price_per_unit: number;
+  unit: string;
+  recorded_date: string;
+  change_percent: number | null;
+  source: string;
+}
+
+export interface CurrentPricesResponse {
+  commodity_id: string;
+  prices: CurrentPrice[];
+  total_markets: number;
+}
+
+export interface MarketPrice {
+  id: string;
+  market: string;
+  market_name: string;
+  commodity: string;
+  commodity_name: string;
+  district_name: string;
+  price_per_unit: string;
+  unit: string;
+  price_type: string;
+  source: string;
+  recorded_date: string;
+}
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface Listing {
+  id: string;
+  farmer: string;
+  farmer_name: string;
+  farmer_phone: string;
+  commodity: string;
+  commodity_name: string;
+  title: string;
+  description: string;
+  quantity_kg: string;
+  quality_grade: string;
+  expected_price_per_kg: string;
+  available_from: string;
+  available_until: string | null;
+  district: string;
+  district_name: string;
+  latitude: string | null;
+  longitude: string | null;
+  pickup_location: string;
+  images: string[];
+  status: string;
+  views_count: number;
+  offers_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateListingData {
+  commodity: string;
+  title: string;
+  description?: string;
+  quantity_kg: number;
+  quality_grade: 'A' | 'B' | 'C';
+  expected_price_per_kg: number;
+  available_from: string;
+  available_until?: string | null;
+  district: string;
+  pickup_location?: string;
+  images?: string[];
+}
+
+export interface AdvisorySession {
+  id: string;
+  title: string;
+  crop_type: string;
+  location: string;
+  language: string;
+  is_active: boolean;
+  last_message: {
+    content: string;
+    sender: 'user' | 'ai' | 'system';
+    created_at: string;
+  } | null;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdvisoryMessage {
+  id: string;
+  sender: 'user' | 'ai' | 'system';
+  content: string;
+  intent: string;
+  confidence: number | null;
+  sources: string[];
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SendMessageResponse {
+  session_id: string;
+  user_message: AdvisoryMessage;
+  ai_message: AdvisoryMessage;
+}
+
+interface RefreshResponse {
+  access: string;
+  refresh?: string;
+}
+
 let refreshRequest: Promise<string> | null = null;
 let onSessionExpired: () => void = () => undefined;
 
 export function setSessionExpiredHandler(handler: () => void): void {
   onSessionExpired = handler;
+}
+
+export function getApiUrl(): string {
+  return API_URL;
+}
+
+function isPublicAuthRequest(url?: string): boolean {
+  return Boolean(
+    url &&
+      [
+        '/auth/login/',
+        '/auth/register/',
+        '/auth/otp/request/',
+        '/auth/otp/verify/',
+        REFRESH_URL,
+      ].some((path) => url.includes(path)),
+  );
 }
 
 async function refreshAccessToken(): Promise<string> {
@@ -73,6 +223,7 @@ async function refreshAccessToken(): Promise<string> {
       const response = await axios.post<RefreshResponse>(
         `${API_URL}${REFRESH_URL}`,
         { refresh },
+        { timeout: REQUEST_TIMEOUT_MS },
       );
       if (!response.data.access) {
         throw new Error('The server returned an invalid access token.');
@@ -90,16 +241,12 @@ async function refreshAccessToken(): Promise<string> {
   return refreshRequest;
 }
 
-async function clearStoredTokens(): Promise<void> {
-  await Promise.all([
-    SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
-    SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
-  ]);
-}
-
 async function expireSession(): Promise<void> {
   try {
-    await clearStoredTokens();
+    await Promise.all([
+      SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
+      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    ]);
   } finally {
     onSessionExpired();
   }
@@ -107,16 +254,14 @@ async function expireSession(): Promise<void> {
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: REQUEST_TIMEOUT_MS,
+  headers: { 'Content-Type': 'application/json' },
 });
 
 api.interceptors.request.use(async (config) => {
+  if (isPublicAuthRequest(config.url)) return config;
   const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`);
-  }
+  if (token) config.headers.set('Authorization', `Bearer ${token}`);
   return config;
 });
 
@@ -126,9 +271,11 @@ api.interceptors.response.use(
     const originalRequest = error.config as
       | InternalAxiosRequestConfig
       | undefined;
-    const isRefreshRequest = originalRequest?.url?.includes(REFRESH_URL);
-
-    if (error.response?.status !== 401 || !originalRequest || isRefreshRequest) {
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      isPublicAuthRequest(originalRequest.url)
+    ) {
       return Promise.reject(error);
     }
 
@@ -136,7 +283,6 @@ api.interceptors.response.use(
       await expireSession();
       return Promise.reject(error);
     }
-
     originalRequest._retry = true;
 
     let accessToken: string;
@@ -163,62 +309,114 @@ export const authApi = {
       phone_number: phone,
       password,
     }),
-  requestOTP: (phone: string) =>
-    api.post('/auth/otp/request/', { phone_number: phone }),
-  verifyOTP: (phone: string, code: string) =>
-    api.post('/auth/otp/verify/', { phone_number: phone, otp_code: code }),
   getProfile: () => api.get<AuthUser>('/auth/profile/'),
 };
 
 export const marketsApi = {
-  getDistricts: () => api.get('/markets/districts/'),
-  getCommodities: () => api.get('/markets/commodities/'),
-  getCurrentPrices: (commodityId: string, districtId?: string) =>
-    api.get('/markets/prices/current/', {
-      params: { commodity: commodityId, district: districtId },
+  getDistricts: () => api.get<District[]>('/markets/districts/'),
+  getCommodities: () => api.get<Commodity[]>('/markets/commodities/'),
+  getPrices: (page = 1) =>
+    api.get<PaginatedResponse<MarketPrice>>('/markets/prices/', {
+      params: { page },
+    }),
+  getCurrentPrices: (commodityId: string, limit = 5) =>
+    api.get<CurrentPricesResponse>('/markets/prices/current/', {
+      params: { commodity: commodityId, limit },
     }),
   getPriceHistory: (commodityId: string, months = 12) =>
-    api.get('/markets/prices/history/', {
+    api.get<{
+      commodity_id: string;
+      period_months: number;
+      data: Array<{
+        date: string | null;
+        avg_price: number | null;
+        min_price: number | null;
+        max_price: number | null;
+        sample_count: number;
+      }>;
+    }>('/markets/prices/history/', {
       params: { commodity: commodityId, months },
     }),
 };
 
-export const forecastsApi = {
-  getForecast: (commodityId: string, marketId?: string) =>
-    api.get('/forecasts/generate/', {
-      params: { commodity: commodityId, market: marketId },
+export const marketplaceApi = {
+  getListings: (page = 1, search = '') =>
+    api.get<PaginatedResponse<Listing>>('/marketplace/listings/', {
+      params: { page, ...(search ? { search } : {}) },
     }),
+  getMyListings: (page = 1) =>
+    api.get<PaginatedResponse<Listing>>('/marketplace/listings/mine/', {
+      params: { page },
+    }),
+  getListing: (id: string) => api.get<Listing>(`/marketplace/listings/${id}/`),
+  createListing: (data: CreateListingData) =>
+    api.post<Listing>('/marketplace/listings/', data),
+  createOffer: (data: {
+    listing: string;
+    offered_price_per_kg: number;
+    quantity_kg: number;
+    pickup_date?: string;
+    message?: string;
+  }) => api.post('/marketplace/offers/', data),
 };
 
 export const advisoryApi = {
-  getSessions: () => api.get('/advisory/sessions/'),
-  createSession: (data: Record<string, unknown>) =>
-    api.post('/advisory/sessions/', data),
-  sendMessage: (content: string, sessionId?: string) =>
-    sessionId
-      ? api.post(`/advisory/chat/${sessionId}/`, { content })
-      : api.post('/advisory/chat/', { content }),
+  getSessions: () =>
+    api.get<PaginatedResponse<AdvisorySession>>('/advisory/sessions/'),
   getMessages: (sessionId: string) =>
-    api.get(`/advisory/sessions/${sessionId}/messages/`),
+    api.get<PaginatedResponse<AdvisoryMessage>>(
+      `/advisory/sessions/${sessionId}/messages/`,
+    ),
+  sendMessage: (
+    content: string,
+    sessionId?: string,
+    context?: { crop_type?: string; location?: string },
+  ) =>
+    api.post<SendMessageResponse>(
+      sessionId ? `/advisory/chat/${sessionId}/` : '/advisory/chat/',
+      { content, ...context },
+    ),
 };
 
-export const diseasesApi = {
-  detect: (image: FormData, cropType: string) =>
-    api.post('/diseases/detect/', image, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      params: { crop_type: cropType },
-    }),
-  getDetections: () => api.get('/diseases/'),
-};
+export function toArray<T>(
+  data: T[] | PaginatedResponse<T>,
+): T[] {
+  return Array.isArray(data) ? data : data.results;
+}
 
-export const marketplaceApi = {
-  getListings: (params?: Record<string, string | number | boolean>) =>
-    api.get('/marketplace/listings/', { params }),
-  getMyListings: () => api.get('/marketplace/listings/mine/'),
-  createListing: (data: Record<string, unknown>) =>
-    api.post('/marketplace/listings/', data),
-  getListing: (id: string) => api.get(`/marketplace/listings/${id}/`),
-  makeOffer: (data: Record<string, unknown>) =>
-    api.post('/marketplace/offers/', data),
-  getMyOffers: () => api.get('/marketplace/offers/mine/'),
-};
+export function getNextPage<T>(
+  page: PaginatedResponse<T>,
+  _pages: PaginatedResponse<T>[],
+  currentPage: number,
+): number | undefined {
+  return page.next ? currentPage + 1 : undefined;
+}
+
+export function getApiErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error
+      ? error.message
+      : 'Something went wrong. Please try again.';
+  }
+
+  const responseData = error.response?.data;
+  if (typeof responseData === 'object' && responseData !== null) {
+    const data = responseData as Record<string, unknown>;
+    const message = data.error ?? data.detail;
+    if (typeof message === 'string') return message;
+    const firstFieldError = Object.values(data).find((value) =>
+      Array.isArray(value) && typeof value[0] === 'string',
+    );
+    if (Array.isArray(firstFieldError) && typeof firstFieldError[0] === 'string') {
+      return firstFieldError[0];
+    }
+  }
+
+  if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+    return 'Could not reach AgriSmart. Check your connection and try again.';
+  }
+  if (error.response?.status && error.response.status >= 500) {
+    return 'AgriSmart is temporarily unavailable. Please try again shortly.';
+  }
+  return error.message || 'Request failed. Please try again.';
+}

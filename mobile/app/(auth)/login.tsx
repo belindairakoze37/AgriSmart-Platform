@@ -1,181 +1,188 @@
-import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Link } from 'expo-router';
+import { ArrowRight, Sprout } from 'lucide-react-native';
+import { Controller, useForm } from 'react-hook-form';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { z } from 'zod';
+import { FormInput } from '../../components/FormInput';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { colors } from '../../constants/theme';
 import { useAuthStore } from '../../store/authStore';
 
+const schema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(9, 'Enter a valid phone number.')
+    .max(17, 'Phone number is too long.'),
+  password: z.string().min(1, 'Enter your password.'),
+});
+
+type FormValues = z.infer<typeof schema>;
+
 export default function LoginScreen() {
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuthStore();
-  const router = useRouter();
-  
-  const handleLogin = async () => {
-    if (!phone || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      await login(phone, password);
-      router.replace('/(tabs)');
-    } catch (error: any) {
-      Alert.alert(
-        'Login Failed',
-        error.response?.data?.error || 'Please check your credentials'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  const login = useAuthStore((state) => state.login);
+  const authError = useAuthStore((state) => state.authError);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { phone: '', password: '' },
+  });
+
+  const submit = handleSubmit(async ({ phone, password }) => {
+    await login(phone, password);
+  });
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.screen}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.logo}>🌾</Text>
-          <Text style={styles.title}>AgriSmart</Text>
-          <Text style={styles.subtitle}>
-            Smart farming decisions for better yields
-          </Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.brandMark}>
+          <Sprout color={colors.white} size={30} strokeWidth={2.3} />
         </View>
-        
-        <View style={styles.form}>
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="+256700000000"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-          />
-          
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Login</Text>
-            )}
-          </TouchableOpacity>
-          
+        <Text style={styles.brand}>AgriSmart</Text>
+        <Text style={styles.tagline}>Grow with better information.</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.heading}>Welcome back</Text>
+          <Text style={styles.helper}>
+            Sign in to check your markets, crops, and farm advice.
+          </Text>
+
+          <View style={styles.form}>
+            <Controller
+              control={control}
+              name="phone"
+              render={({ field: { onChange, value } }) => (
+                <FormInput
+                  autoComplete="tel"
+                  error={errors.phone?.message}
+                  keyboardType="phone-pad"
+                  label="Phone number"
+                  onChangeText={onChange}
+                  placeholder="+256 700 000 000"
+                  textContentType="telephoneNumber"
+                  value={value}
+                />
+              )}
+            />
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <FormInput
+                  autoComplete="password"
+                  error={errors.password?.message}
+                  label="Password"
+                  onChangeText={onChange}
+                  placeholder="Enter your password"
+                  secureTextEntry
+                  secureToggle
+                  textContentType="password"
+                  value={value}
+                />
+              )}
+            />
+            {authError ? (
+              <View accessibilityRole="alert" style={styles.errorBox}>
+                <Text style={styles.errorText}>{authError}</Text>
+              </View>
+            ) : null}
+            <PrimaryButton
+              accessibilityLabel="Sign in"
+              loading={isSubmitting || isLoading}
+              onPress={() => void submit()}
+            >
+              Sign in
+            </PrimaryButton>
+          </View>
+
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>New to AgriSmart? </Text>
             <Link href="/(auth)/register" asChild>
-              <TouchableOpacity>
-                <Text style={styles.linkText}>Register</Text>
-              </TouchableOpacity>
+              <Text accessibilityRole="link" style={styles.link}>
+                Create an account <ArrowRight color={colors.primary} size={14} />
+              </Text>
             </Link>
           </View>
         </View>
+        <Text style={styles.disclaimer}>
+          Your account information is stored securely.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F9F4',
-  },
+  screen: { backgroundColor: colors.background, flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    padding: 24,
     justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 36,
   },
-  header: {
+  brandMark: {
     alignItems: 'center',
-    marginBottom: 48,
+    alignSelf: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    height: 64,
+    justifyContent: 'center',
+    marginBottom: 13,
+    width: 64,
   },
-  logo: {
-    fontSize: 72,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
+  brand: {
+    color: colors.darkGreen,
+    fontSize: 29,
+    fontWeight: '900',
     textAlign: 'center',
   },
-  form: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+  tagline: { color: colors.muted, fontSize: 14, marginTop: 5, textAlign: 'center' },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    marginTop: 32,
+    padding: 22,
+    shadowColor: '#183C1B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    elevation: 3,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  heading: { color: colors.darkGreen, fontSize: 23, fontWeight: '800' },
+  helper: { color: colors.muted, fontSize: 13, lineHeight: 19, marginTop: 7 },
+  form: { gap: 18, marginTop: 24 },
+  errorBox: {
+    backgroundColor: '#FEF2F2',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    backgroundColor: '#FAFAFA',
+    padding: 12,
   },
-  button: {
-    backgroundColor: '#2E7D32',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  errorText: { color: colors.error, fontSize: 13, lineHeight: 19 },
   footer: {
+    alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 22,
   },
-  footerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  linkText: {
-    color: '#2E7D32',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  footerText: { color: colors.muted, fontSize: 13 },
+  link: { alignItems: 'center', color: colors.primary, fontSize: 13, fontWeight: '800' },
+  disclaimer: { color: colors.muted, fontSize: 11, marginTop: 18, textAlign: 'center' },
 });

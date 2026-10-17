@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import axios from 'axios';
 import type { AuthUser, RegisterData } from '../services/api';
 import {
   authApi,
+  getApiErrorMessage,
   setSessionExpiredHandler,
 } from '../services/api';
 
@@ -19,17 +19,7 @@ interface AuthState {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError<{ detail?: string; error?: string }>(error)) {
-    return (
-      error.response?.data?.detail ??
-      error.response?.data?.error ??
-      error.message
-    );
-  }
-  return error instanceof Error ? error.message : fallback;
+  initializeAuth: () => Promise<void>;
 }
 
 async function saveTokens(tokens: {
@@ -57,7 +47,9 @@ async function clearTokens(): Promise<void> {
   ]);
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+let initializationPromise: Promise<void> | null = null;
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
@@ -78,9 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        authError: getErrorMessage(error, 'Login failed.'),
+        authError: getApiErrorMessage(error),
       });
-      throw error;
     }
   },
 
@@ -99,29 +90,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        authError: getErrorMessage(error, 'Registration failed.'),
+        authError: getApiErrorMessage(error),
       });
-      throw error;
     }
   },
 
   logout: async () => {
-    try {
-      await clearTokens();
-    } finally {
-      set({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        authError: null,
-      });
-    }
+    await clearTokens();
+    set({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      authError: null,
+    });
   },
 
   loadUser: async () => {
     set({ isLoading: true, authError: null });
+    let token: string | null = null;
     try {
-      const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+      token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       if (!token) {
         set({
           user: null,
@@ -138,14 +126,24 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
     } catch (error) {
-      const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       set({
         user: null,
         isAuthenticated: Boolean(token),
         isLoading: false,
-        authError: getErrorMessage(error, 'Unable to load your profile.'),
+        authError: getApiErrorMessage(error),
       });
     }
+  },
+
+  initializeAuth: () => {
+    if (!initializationPromise) {
+      initializationPromise = get()
+        .loadUser()
+        .finally(() => {
+          initializationPromise = null;
+        });
+    }
+    return initializationPromise;
   },
 }));
 

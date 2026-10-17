@@ -1,226 +1,201 @@
-import { useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, StyleSheet,
-  TouchableOpacity, RefreshControl
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import {
+  ArrowRight,
+  Leaf,
+  MessageCircle,
+  ShoppingBasket,
+} from 'lucide-react-native';
+import { useCallback } from 'react';
+import {
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { CommodityCard } from '../../components/CommodityCard';
+import { FeedbackState } from '../../components/FeedbackState';
+import { LoadingState } from '../../components/LoadingState';
+import { Screen } from '../../components/Screen';
+import { colors } from '../../constants/theme';
+import { getApiErrorMessage, marketsApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { marketsApi, forecastsApi } from '../../services/api';
 
-interface PriceData {
-  market_name: string;
-  price_per_unit: number;
-  change_percent: number | null;
-}
+const quickActions = [
+  { label: 'Market prices', Icon: Leaf, route: '/(tabs)/markets', tone: '#E8F5E9' },
+  { label: 'Ask an advisor', Icon: MessageCircle, route: '/(tabs)/advisory', tone: '#EAF1FF' },
+  { label: 'Find produce', Icon: ShoppingBasket, route: '/(tabs)/marketplace', tone: '#FFF4E5' },
+] as const;
 
 export default function DashboardScreen() {
-  const { user } = useAuthStore();
   const router = useRouter();
-  const [commodities, setCommodities] = useState<any[]>([]);
-  const [prices, setPrices] = useState<Record<string, PriceData>>({});
-  const [refreshing, setRefreshing] = useState(false);
-  
-  const loadData = async () => {
-    try {
-      const commRes = await marketsApi.getCommodities();
-      setCommodities(commRes.data);
-      
-      // Load prices for top commodities
-      const priceMap: Record<string, PriceData> = {};
-      for (const comm of commRes.data.slice(0, 4)) {
-        try {
-          const priceRes = await marketsApi.getCurrentPrices(comm.id);
-          if (priceRes.data.prices.length > 0) {
-            priceMap[comm.id] = priceRes.data.prices[0];
-          }
-        } catch {}
-      }
-      setPrices(priceMap);
-    } catch (error) {
-      console.error('Failed to load dashboard data', error);
-    }
-  };
-  
-  useEffect(() => {
-    loadData();
-  }, []);
-  
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
-  
+  const user = useAuthStore((state) => state.user);
+  const commoditiesQuery = useQuery({
+    queryKey: ['markets', 'commodities'],
+    queryFn: async () => (await marketsApi.getCommodities()).data,
+  });
+  const commodities = commoditiesQuery.data ?? [];
+  const topCommodities = commodities.slice(0, 3);
+  const priceQueries = useQueries({
+    queries: topCommodities.map((commodity) => ({
+      queryKey: ['markets', 'current-price', commodity.id],
+      queryFn: async () =>
+        (await marketsApi.getCurrentPrices(commodity.id, 1)).data,
+      staleTime: 5 * 60_000,
+    })),
+  });
+  const refresh = useCallback(() => {
+    void commoditiesQuery.refetch();
+    priceQueries.forEach((query) => {
+      if (query.refetch) void query.refetch();
+    });
+  }, [commoditiesQuery, priceQueries]);
+
+  const loadingPrices = priceQueries.some((query) => query.isPending);
+  const priceError = priceQueries.find((query) => query.isError)?.error;
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>
-              Good morning, {user?.first_name || 'Farmer'}!
-            </Text>
-            <Text style={styles.location}>📍 Uganda</Text>
-          </View>
-          <TouchableOpacity style={styles.profileButton}>
-            <Text style={styles.profileInitial}>
-              {user?.first_name?.[0] || 'F'}
-            </Text>
-          </TouchableOpacity>
+    <Screen
+      scroll
+      contentContainerStyle={styles.screenContent}
+      refreshControl={
+        <RefreshControl
+          colors={[colors.primary]}
+          onRefresh={refresh}
+          refreshing={commoditiesQuery.isRefetching || priceQueries.some((q) => q.isRefetching)}
+          tintColor={colors.primary}
+        />
+      }
+    >
+      <View style={styles.topline}>
+        <View style={styles.greetingBlock}>
+          <Text style={styles.eyebrow}>AGRISMART · UGANDA</Text>
+          <Text style={styles.greeting}>
+            Hello{user?.first_name ? `, ${user.first_name}` : ''}
+          </Text>
+          <Text style={styles.subtitle}>A better day starts with a good plan.</Text>
         </View>
-        
-        {/* Quick Actions */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#E8F5E9' }]}
-            onPress={() => router.push('/(tabs)/markets')}
-          >
-            <Text style={styles.actionIcon}>📊</Text>
-            <Text style={styles.actionLabel}>Prices</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#FFF3E0' }]}
-            onPress={() => router.push('/(tabs)/advisory')}
-          >
-            <Text style={styles.actionIcon}>💬</Text>
-            <Text style={styles.actionLabel}>Ask AI</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#E3F2FD' }]}
-            onPress={() => router.push('/diseases/detect')}
-          >
-            <Text style={styles.actionIcon}>📷</Text>
-            <Text style={styles.actionLabel}>Detect</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#FCE4EC' }]}
-            onPress={() => router.push('/(tabs)/marketplace')}
-          >
-            <Text style={styles.actionIcon}>🛒</Text>
-            <Text style={styles.actionLabel}>Sell</Text>
-          </TouchableOpacity>
+        <Pressable
+          accessibilityLabel="Open profile"
+          accessibilityRole="button"
+          onPress={() => router.push('/(tabs)/profile')}
+          style={styles.avatar}
+        >
+          <Text style={styles.avatarText}>
+            {(user?.first_name?.[0] || user?.phone_number?.[0] || 'A').toUpperCase()}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.hero}>
+        <View style={styles.heroIcon}>
+          <Leaf color={colors.white} size={23} />
         </View>
-        
-        {/* Market Prices */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💰 Market Prices</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/markets')}>
-              <Text style={styles.seeAll}>See all →</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {commodities.slice(0, 4).map((commodity) => {
-            const price = prices[commodity.id];
-            const change = price?.change_percent || 0;
-            const isPositive = change >= 0;
-            
-            return (
-              <TouchableOpacity
-                key={commodity.id}
-                style={styles.priceCard}
-                onPress={() => router.push(`/markets/${commodity.id}`)}
-              >
-                <View style={styles.priceCardLeft}>
-                  <Text style={styles.commodityName}>{commodity.name}</Text>
-                  <Text style={styles.commodityCategory}>
-                    {commodity.category}
-                  </Text>
-                </View>
-                <View style={styles.priceCardRight}>
-                  <Text style={styles.priceValue}>
-                    UGX {price?.price_per_unit?.toLocaleString() || '—'}/kg
-                  </Text>
-                  {price?.change_percent !== null && price?.change_percent !== undefined && (
-                    <Text style={[
-                      styles.priceChange,
-                      { color: isPositive ? '#2E7D32' : '#C62828' }
-                    ]}>
-                      {isPositive ? '▲' : '▼'} {Math.abs(change).toFixed(1)}%
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+        <View style={styles.heroCopy}>
+          <Text style={styles.heroTitle}>Your farm, better informed</Text>
+          <Text style={styles.heroText}>
+            Check the latest market data or get practical crop guidance.
+          </Text>
         </View>
-        
-        {/* Alerts */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔔 Alerts</Text>
-          <View style={styles.alertCard}>
-            <Text style={styles.alertText}>
-              Fall armyworm reported in your area. Scout your maize fields.
-            </Text>
-          </View>
+      </View>
+
+      <View style={styles.sectionHeading}>
+        <Text style={styles.sectionTitle}>Quick access</Text>
+      </View>
+      <View style={styles.actions}>
+        {quickActions.map(({ label, Icon, route, tone }) => (
+          <Pressable
+            accessibilityRole="button"
+            key={label}
+            onPress={() => router.push(route)}
+            style={({ pressed }) => [styles.actionCard, pressed && styles.pressed]}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: tone }]}>
+              <Icon color={colors.primary} size={21} />
+            </View>
+            <Text style={styles.actionLabel}>{label}</Text>
+            <ArrowRight color="#9CA3AF" size={15} />
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={styles.sectionHeading}>
+        <View>
+          <Text style={styles.sectionTitle}>Market watch</Text>
+          <Text style={styles.sectionSubtitle}>Latest prices by market</Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/(tabs)/markets')}
+          style={styles.seeAll}
+        >
+          <Text style={styles.seeAllText}>All markets</Text>
+          <ArrowRight color={colors.primary} size={15} />
+        </Pressable>
+      </View>
+
+      {commoditiesQuery.isPending || loadingPrices ? (
+        <LoadingState label="Loading market information..." />
+      ) : commoditiesQuery.isError || priceError ? (
+        <FeedbackState
+          actionLabel="Try again"
+          kind="error"
+          message={getApiErrorMessage(commoditiesQuery.error ?? priceError)}
+          onAction={refresh}
+          title="Could not load market information"
+        />
+      ) : topCommodities.length === 0 ? (
+        <FeedbackState
+          message="There are no commodities available to show yet."
+          title="No market data yet"
+        />
+      ) : (
+        topCommodities.map((commodity, index) => (
+          <CommodityCard
+            commodity={commodity}
+            key={commodity.id}
+            price={priceQueries[index]?.data?.prices[0]}
+          />
+        ))
+      )}
+
+      <View style={styles.notice}>
+        <Text style={styles.noticeTitle}>Use current information wisely</Text>
+        <Text style={styles.noticeText}>
+          Market prices are reported by the backend with their source and date.
+          Availability can vary by district.
+        </Text>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F9F4' },
-  scrollContent: { padding: 16 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  greeting: { fontSize: 20, fontWeight: 'bold', color: '#1B5E20' },
-  location: { fontSize: 14, color: '#666', marginTop: 4 },
-  profileButton: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#2E7D32',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  profileInitial: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  actionCard: {
-    flex: 1, marginHorizontal: 4, padding: 12,
-    borderRadius: 12, alignItems: 'center',
-  },
-  actionIcon: { fontSize: 28, marginBottom: 4 },
-  actionLabel: { fontSize: 12, fontWeight: '600', color: '#333' },
-  section: { marginBottom: 24 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1B5E20' },
-  seeAll: { fontSize: 14, color: '#2E7D32', fontWeight: '600' },
-  priceCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    marginBottom: 8, flexDirection: 'row',
-    justifyContent: 'space-between', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-  },
-  priceCardLeft: { flex: 1 },
-  commodityName: { fontSize: 16, fontWeight: '600', color: '#333' },
-  commodityCategory: { fontSize: 12, color: '#999', marginTop: 2 },
-  priceCardRight: { alignItems: 'flex-end' },
-  priceValue: { fontSize: 16, fontWeight: 'bold', color: '#1B5E20' },
-  priceChange: { fontSize: 13, fontWeight: '600', marginTop: 4 },
-  alertCard: {
-    backgroundColor: '#FFF3E0', borderRadius: 12, padding: 16,
-    borderLeftWidth: 4, borderLeftColor: '#F57C00',
-  },
-  alertText: { color: '#E65100', fontSize: 14, lineHeight: 20 },
+  screenContent: { paddingBottom: 34 },
+  topline: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  greetingBlock: { flex: 1 },
+  eyebrow: { color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 1.1 },
+  greeting: { color: colors.darkGreen, fontSize: 27, fontWeight: '900', marginTop: 6 },
+  subtitle: { color: colors.muted, fontSize: 13, marginTop: 4 },
+  avatar: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: 24, height: 48, justifyContent: 'center', marginLeft: 12, width: 48 },
+  avatarText: { color: colors.white, fontSize: 18, fontWeight: '800' },
+  hero: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: 20, flexDirection: 'row', gap: 13, marginTop: 24, padding: 18 },
+  heroIcon: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 14, height: 46, justifyContent: 'center', width: 46 },
+  heroCopy: { flex: 1 },
+  heroTitle: { color: colors.white, fontSize: 15, fontWeight: '800' },
+  heroText: { color: '#E7F5E8', fontSize: 12, lineHeight: 18, marginTop: 5 },
+  sectionHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, marginTop: 27 },
+  sectionTitle: { color: colors.darkGreen, fontSize: 18, fontWeight: '800' },
+  sectionSubtitle: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  actions: { gap: 9 },
+  actionCard: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 14, flexDirection: 'row', gap: 12, minHeight: 62, paddingHorizontal: 12 },
+  actionIcon: { alignItems: 'center', borderRadius: 12, height: 38, justifyContent: 'center', width: 38 },
+  actionLabel: { color: colors.text, flex: 1, fontSize: 13, fontWeight: '700' },
+  pressed: { opacity: 0.82 },
+  seeAll: { alignItems: 'center', flexDirection: 'row', gap: 5 },
+  seeAllText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
+  notice: { backgroundColor: '#FFF7E6', borderRadius: 15, marginTop: 10, padding: 14 },
+  noticeTitle: { color: '#8A5A00', fontSize: 12, fontWeight: '800' },
+  noticeText: { color: '#866E41', fontSize: 11, lineHeight: 17, marginTop: 4 },
 });
