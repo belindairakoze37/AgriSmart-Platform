@@ -1,176 +1,362 @@
-# AgriSmart Platform
+# AgriSmart Platform 
 
-AgriSmart consists of a shared Django REST API and two clients: the existing
-React Native/Expo app for Android and a separate responsive React/TypeScript
-web app for desktop and mobile browsers. User accounts, market reports,
-marketplace listings/offers, and advisory conversations live in the backend
-and are shared between clients.
+**AI-Powered Digital Agriculture for Smallholder Farmers in Uganda**
 
-## Project structure
+AgriSmart is a digital agriculture platform designed to help smallholder farmers make informed farming and business decisions. It brings agricultural market information, AI-assisted advisory services, crop disease detection, and a farmer-to-buyer marketplace into one platform accessible through **mobile devices and desktop computers**.
 
-- `backend/` — Django REST Framework API and business data.
-- `mobile/` — React Native, Expo Router, NativeWind, and SecureStore client.
-- `web/` — React, TypeScript, Vite, React Router and HttpOnly-cookie browser
-  authentication.
+The platform aims to connect farmers with useful agricultural information and potential buyers, helping them improve productivity, access market opportunities, and make better-informed decisions.
 
-## Start all three applications
+##  Key Features
 
-Open separate terminals in the repository root.
+###  1. Agricultural Market Intelligence
 
-### 1. Django backend
+Access agricultural market information to support better selling and production decisions.
 
-```powershell
-cd backend
-.\venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000
+- View available commodities and market prices.
+- Explore historical price information where available.
+- Support future price forecasting using historical data and machine learning.
+- Help farmers compare market opportunities across regions.
+
+###  2. AI-Powered Agricultural Advisory
+
+AgriSmart aims to provide farmers with accessible agricultural guidance through a digital advisory assistant.
+
+- Ask farming questions in natural language.
+- Get guidance on crop management, planting, and common farming challenges.
+- Access advisory conversations and previous questions where supported.
+- Extend advisory capabilities through rule-based recommendations and AI language models.
+
+*Important: AI-generated advice should be treated as guidance, not a substitute for qualified agricultural expertise.*
+
+###  3. Crop Disease Detection
+
+The platform is designed to support crop disease identification using images of affected plants.
+
+- Submit crop images for analysis.
+- Identify supported crop diseases when a trained model is available.
+- Provide relevant treatment and prevention recommendations.
+
+Disease detection depends on the availability and integration of a trained model. It should not be considered operational until the implementation has been tested and verified.
+
+###  4. Farmer-to-Buyer Marketplace
+
+Connect farmers and buyers through a digital produce marketplace.
+
+- Browse available agricultural produce.
+- Create produce listings with quantities, prices, and descriptions.
+- View listing details.
+- Allow buyers to submit offers where supported.
+- Improve access to potential customers and market opportunities.
+
+###  5. Notifications and Alerts
+
+AgriSmart includes notification capabilities intended to keep users informed about important activities.
+
+Potential notification use cases include:
+
+- Updates on marketplace offers.
+- Changes to relevant agricultural market prices.
+- Agricultural advisory updates.
+- Weather alerts and pest or disease warnings when the necessary data integrations are available.
+
+Actual notification channels and alert types depend on the implemented integrations.
+
+### 📱 6. Mobile and Desktop Access
+
+AgriSmart is designed for use across different devices.
+
+- **Mobile application:** React Native and Expo.
+- **Web application:** React, Vite, and TypeScript.
+- **Backend API:** Django REST Framework, shared by the client applications.
+
+The goal is to provide a consistent experience across mobile phones, tablets, and desktop computers while keeping the interface responsive and accessible.
+
+---
+
+## 🛠️ Technology Stack
+
+| Component | Technologies |
+|---|---|
+| Backend | Python, Django, Django REST Framework |
+| Authentication | JWT with `djangorestframework-simplejwt` |
+| Database | SQLite for local development; PostgreSQL where configured for deployment |
+| API documentation | drf-spectacular and Swagger UI, where configured |
+| Mobile application | React Native, Expo, Expo Router, TypeScript |
+| Mobile state management | Zustand and TanStack Query |
+| Mobile API requests | Axios |
+| Mobile token storage | Expo SecureStore on supported native platforms |
+| Web application | React, Vite, TypeScript |
+| Web styling | Tailwind CSS and project UI components |
+| Charts and visualizations | Recharts, where used |
+| AI and machine learning | Planned or integrated components depend on the module's implementation |
+
+*The technology list describes the project's stack and intended integrations. Check the dependency files and source code for the exact installed versions and currently active capabilities.*
+
+---
+
+##  Project Structure
+
+```text
+AgriSmart-Platform/
+├── backend/
+│   ├── config/                 # Django project configuration
+│   ├── apps/
+│   │   ├── accounts/           # User and account functionality
+│   │   ├── markets/            # Agricultural markets and prices
+│   │   ├── forecasts/          # Price forecasting functionality
+│   │   ├── advisory/           # Agricultural advisory services
+│   │   ├── diseases/           # Crop disease functionality
+│   │   ├── marketplace/        # Produce listings and offers
+│   │   └── notifications/      # Notifications
+│   ├── requirements/           # Python dependency files
+│   ├── manage.py               # Django management commands
+│   └── .env.example            # Example environment configuration
+├── mobile/
+│   ├── app/                    # Expo Router screens
+│   ├── components/             # Reusable interface components
+│   ├── services/               # API client and services
+│   └── store/                  # Client-side state management
+├── web/
+│   └── src/                    # React web application
+├── README.md
+└── .gitignore
 ```
 
-Confirm `ALLOWED_HOSTS` includes the host used by your client. The development
-settings allow CORS origins for Vite (`http://localhost:5173`) and Expo
-(`http://localhost:8081`). Set `WEB_APP_ORIGINS` to a comma-separated list of
-the deployed web origins in the backend environment; these origins are also
-added to `CSRF_TRUSTED_ORIGINS`. For production use HTTPS, secure deployment
-settings, a real `SECRET_KEY`, and explicit hosts and browser origins.
+*This is a high-level overview. Some directories or modules may differ as development continues.*
 
-### 2. Android app
+---
 
-```powershell
+##  Getting Started
+
+Follow these instructions to run AgriSmart locally. Backend, mobile, and web applications may require separate terminals.
+
+### Prerequisites
+
+Install the following tools:
+
+- [Git](https://git-scm.com/)
+- [Python](https://www.python.org/downloads/) compatible with the backend's dependencies
+- [Node.js and npm](https://nodejs.org/)
+- [Expo Go](https://expo.dev/go/) for testing on a compatible physical device, or an appropriate emulator
+- A code editor such as [Visual Studio Code](https://code.visualstudio.com/)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/belindairakoze37/AgriSmart-Platform.git
+cd AgriSmart-Platform
+```
+
+### 2. Set up the backend
+
+Open a terminal in the project root, then navigate to the backend:
+
+```bash
+cd backend
+```
+
+Create a virtual environment:
+
+```bash
+python -m venv venv
+```
+
+Activate it in Git Bash on Windows:
+
+```bash
+source venv/Scripts/activate
+```
+
+On Windows Command Prompt, use:
+
+```bat
+venv\Scripts\activate.bat
+```
+
+On macOS or Linux, use:
+
+```bash
+source venv/bin/activate
+```
+
+Install the dependencies using the requirements file available in your project. For example, if `requirements/base.txt` contains the required packages:
+
+```bash
+pip install -r requirements/base.txt
+```
+
+Configure the environment:
+
+1. Review `backend/.env.example`.
+2. Create the appropriate local `.env` file if required by the project configuration.
+3. Set the necessary development values, including a Django secret key and database settings.
+4. Never commit real credentials, secret keys, or production environment variables.
+
+Apply database migrations:
+
+```bash
+python manage.py migrate
+```
+
+Start the development server:
+
+```bash
+python manage.py runserver
+```
+
+The backend should now be available at:
+
+- API base: `http://127.0.0.1:8000/`
+- API documentation: `http://127.0.0.1:8000/api/docs/`, if enabled in the current configuration.
+
+Check the project's URL configuration and Swagger documentation for the exact API routes.
+
+### 3. Set up the mobile application
+
+Open a **second terminal** from the repository root:
+
+```bash
 cd mobile
-Copy-Item .env.example .env
-npm.cmd ci
-npm.cmd run start
+npm install
 ```
 
-The committed emulator default is `http://10.0.2.2:8000/api/v1`. On a physical
-Android device replace it with the PC's LAN address, such as
-`http://192.168.1.20:8000/api/v1`, and allow Django through the firewall. The
-backend must bind to `0.0.0.0`. Expo environment variables are bundled into the
-client; never store secrets there. `mobile/.env` is git-ignored.
+Configure the mobile application's API URL using the environment variable expected by its API client.
 
-### 3. Desktop or mobile browser
+For a physical phone connected to the same Wi-Fi network as your computer, the URL may look like this:
 
-```powershell
+```env
+EXPO_PUBLIC_API_URL=http://192.168.1.100:8000/api/v1
+```
+
+Replace `192.168.1.100` with your computer's actual local IP address, and adjust the API path to match the mobile application's configuration.
+
+**Important:** `127.0.0.1` on a physical phone refers to the phone itself, not your computer. Also, ensure your firewall permits the phone to reach the development server.
+
+Start Expo:
+
+```bash
+npx expo start
+```
+
+Follow the terminal instructions to open the application in Expo Go or an appropriate emulator. Use the Expo SDK and Expo Go versions supported by the project.
+
+### 4. Set up the web application
+
+Open another terminal from the repository root:
+
+```bash
 cd web
-Copy-Item .env.example .env
-npm.cmd ci
-npm.cmd run dev
+npm install
 ```
 
-Open the Vite URL printed in the terminal (normally `http://localhost:5173`).
-Set `VITE_API_URL` in `web/.env` to the backend API base URL reachable by the
-browser. For local desktop development that is
-`http://localhost:8000/api/v1`. Mobile browsers can use the same responsive
-web app served from the development machine's LAN address; use the machine's
-LAN IP for `VITE_API_URL` and list the browser's origin in `WEB_APP_ORIGINS`.
-Restart Vite after changing `.env`. `VITE_` values are public and must never
-contain credentials or secrets. `web/.env` is git-ignored.
+Configure the web application's backend URL using the environment variable expected by its API client. Check the existing source code and any example environment files before choosing a variable name.
 
-The browser uses a short-lived access token held in application memory and an
-HttpOnly, SameSite=Lax refresh cookie restricted to `/api/v1/auth/web/`. Login,
-registration, refresh and logout require CSRF protection. For production, serve
-the web app over HTTPS and set `WEB_APP_ORIGINS` to the exact web origin(s).
-Keep the web app and API same-site if possible: cross-site deployments need a
-deliberate cookie/SameSite and CSRF deployment design.
+Start the development server:
 
-## Feature/API mapping
-
-- Account login, registration and profile: `/api/v1/auth/`; browser sessions use
-  the additional `/api/v1/auth/web/` cookie endpoints and the same users/JWT
-  and profile resource.
-- Commodity, district, current price and history: `/api/v1/markets/`.
-- Administrator analytics, commodity management, and market-price CSV import:
-  `/api/v1/markets/admin/`.
-- Advisory session/message history and chat: `/api/v1/advisory/`.
-- Marketplace list/detail/create, own listings and offers:
-  `/api/v1/marketplace/`.
-- District-scoped extension-officer farmer lists, outbreak reports, and bulk
-  in-app advisories: `/api/v1/farmers/officers/`.
-
-Both clients access the same API-managed business records. Browser and mobile
-clients have distinct refresh-token storage, but sign in to the same account.
-Mobile farmers can manage farms and crops, set price alerts, receive
-in-app marketplace/price/weather notifications, and set notification
-preferences. The browser includes role-gated administrator and extension
-officer portals. The price-import CSV requires `market`, `commodity`,
-`price_per_unit`, and `recorded_date`; `unit`, `price_type`, and `source` are
-optional. All rows are validated before changes are applied.
-Administrator and extension-officer roles must be provisioned by an
-administrator; public registration cannot assign either role.
-
-For development or demonstrations, add sample marketplace listings after
-migrations with:
-
-```powershell
-cd backend
-.\venv\Scripts\python.exe manage.py seed_marketplace
+```bash
+npm run dev
 ```
 
-The command is safe to rerun. It creates six listings labeled as samples in the
-browser and mobile marketplace; demo seller accounts are inactive, and sample
-listings do not accept offers. Do not run this command in production.
+Open the local URL printed by Vite in your terminal.
 
-## AI agricultural advisor
+Make sure the Django backend is running and that CORS settings allow the local web application's origin.
 
-The advisor calls OpenAI's Chat Completions API using `gpt-4o-mini` by default.
-Install backend dependencies and set `OPENAI_API_KEY` in `backend/.env` (or in
-the backend process environment); never put the key in the browser or mobile
-app. `OPENAI_MODEL` can override the default model. Restart Django after
-changing the environment. Without a key, the advisor still returns limited
-local crop guidance and labels it as offline; provider errors also fall back to
-local guidance and are logged. AI availability requires a valid key, API
-access, and network access from the backend.
+*Note: These instructions assume the web application has a working `package.json` with a `dev` script. Use the scripts defined in that file if they differ.*
 
-The live service still has external prerequisites and incomplete integrations:
-weather requires a valid OpenWeatherMap key and district coordinates; SMS/OTP
-delivery and feature-phone offer replies are not connected; MTN/Airtel payments,
-escrow, and actual payment-confirmed transaction handling are not connected;
-push notification delivery is not configured; the UI language preference is
-stored but does not yet translate all screens; and disease diagnosis remains
-unavailable until a compatible trained model is installed. Completed
-transaction records and totals in the admin portal are platform database
-records, not proof of payment or platform revenue.
+---
 
-## Production deployment
+##  API Documentation
 
-Build the browser app from `web/`:
+AgriSmart uses Django REST Framework to expose backend functionality to its client applications.
 
-```powershell
-npm.cmd run build
-```
+When the backend is running and API documentation is enabled, open:
 
-Publish `web/dist/` behind a static file server with SPA fallback rewriting:
-route unknown application paths back to `index.html`. Set the production
-`VITE_API_URL` at build time to the HTTPS API origin and configure the backend
-to allow the exact web origin and credentials. Browser auth requires cookies;
-verify the deployed cookie's Secure, HttpOnly, SameSite, path, HTTPS, CORS, and
-CSRF settings before release.
+**Swagger UI:** `http://127.0.0.1:8000/api/docs/`
 
-The browser-specific auth endpoints use Django's SimpleJWT token blacklist
-app. Apply backend migrations before enabling the web app:
+Use the live API documentation as the source of truth for available endpoints, authentication requirements, request formats, and response structures.
 
-```powershell
-cd backend
-.\venv\Scripts\python.exe manage.py migrate
-```
+Examples of API areas include:
 
-See [web/README.md](./web/README.md) for detailed browser development,
-authentication, and deployment instructions.
+- Authentication and user accounts.
+- Agricultural markets and commodity prices.
+- Price forecasting.
+- Agricultural advisory conversations.
+- Crop disease analysis.
+- Marketplace listings and offers.
+- Notifications.
 
-Build/deploy the Android app with Expo's platform tooling from `mobile/`; point
-`EXPO_PUBLIC_API_URL` to the production HTTPS API before creating the build.
-Deploy Django separately using the project's production settings, database,
-static/media storage, allowed hosts, and secret environment variables.
+Endpoint paths and supported methods may change during development. Confirm them in Swagger UI rather than assuming an endpoint exists.
 
-## Validation
+---
 
-From `web/`: `npm.cmd run typecheck`, `npm.cmd run lint`,
-`npm.cmd test`, and `npm.cmd run build`.
+##  Security and Best Practices
 
-From `mobile/`: `.\node_modules\.bin\tsc.cmd --noEmit`,
-`npm.cmd run lint`, `.\node_modules\.bin\expo.cmd install --check`,
-`.\node_modules\.bin\expo.cmd export --platform web`, and
-`.\node_modules\.bin\expo.cmd export --platform android`.
+- Keep secret keys, database credentials, and API keys in environment variables.
+- Never commit `.env` files containing real secrets.
+- Use Django's password hashing and the configured authentication system.
+- Protect private API endpoints with appropriate permissions.
+- Store mobile authentication tokens using the configured secure storage mechanism.
+- Configure CORS and allowed hosts appropriately for each environment.
+- Validate user input and uploaded files on the backend.
+- Use HTTPS and production-appropriate security settings when deploying.
+- Avoid committing local databases, generated files, virtual environments, or build artifacts unless they are intentionally required.
 
-The browser authentication state/form tests and Django browser-cookie/auth tests
-are automated. Production bundle builds validate routing and platform bundling;
-they do not replace a live-backend browser test or a physical/emulated Android
-test.
+---
+
+##  Roadmap
+
+AgriSmart is being developed in stages. The roadmap below describes areas of work, not a guarantee that every feature is already available.
+
+- [ ] Complete and verify backend APIs and authentication flows.
+- [ ] Continue improving the mobile application and its core user journeys.
+- [ ] Complete responsive web experiences for relevant user roles.
+- [ ] Improve agricultural market data quality and price forecasting.
+- [ ] Train and evaluate crop disease detection models.
+- [ ] Expand agricultural advisory capabilities and validate recommendations.
+- [ ] Add or complete SMS integrations where required.
+- [ ] Evaluate and integrate supported payment providers.
+- [ ] Improve automated testing, deployment, monitoring, and documentation.
+- [ ] Conduct end-to-end testing across desktop and mobile devices.
+
+Update this checklist as features are implemented, tested, and released.
+
+---
+
+##  Testing and Quality
+
+Before submitting changes:
+
+1. Run the relevant backend tests.
+2. Run the mobile or web checks defined in the respective `package.json` scripts.
+3. Test authentication and protected routes.
+4. Verify that client applications can reach the backend.
+5. Check responsive layouts on desktop and mobile screen sizes.
+6. Confirm that no secrets or unintended local data are included in the changes.
+
+Document any known limitations that remain.
+
+---
+
+##  Contributing
+
+Contributions, suggestions, and bug reports are welcome.
+
+To contribute:
+
+1. Create a feature branch from the appropriate development branch.
+2. Make a focused change.
+3. Run the relevant tests and checks.
+4. Use clear commit messages, such as `feat:`, `fix:`, `test:`, `docs:`, or `refactor:`.
+5. Open a pull request describing the change and its verification.
+
+Please avoid committing unrelated changes, credentials, or local development data.
+
+---
+
+##  License
+
+Add or update the repository's `LICENSE` file to reflect the license selected for AgriSmart. If the project uses the MIT License, include the complete MIT License text in that file.
+
+---
+
+**Built with ❤️ to support agricultural innovation and smallholder farmers in Uganda.**
